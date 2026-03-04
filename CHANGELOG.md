@@ -64,6 +64,10 @@ All notable changes to this project are documented in this file.
 - Prevented thumbnail preview disappearance during drag by disabling virtualization paint optimizations while actively dragging.
 - Addressed intermittent fit-width/fit-page canvas render overlap warning by serializing render task cancellation before starting new renders.
 - Removed fit-mode render feedback loops that could trigger redundant preview render cycles.
+- Reworked preview canvas rendering flow to use explicit cancel-and-render sequencing with stale-run guards, preventing lingering fit-mode overlap warnings.
+- Updated pdf.js cancel handling to tolerate both `RenderingCancelledException` and `RenderingCancelled` variants without surfacing false errors.
+- Fixed Power Panel tooltip clipping by separating fixed controls from the scrollable activity area.
+- Corrected drag-time thumbnail shrink/disappear artifacts by switching sortable item transforms from `CSS.Transform` to `CSS.Translate` when using drag overlays.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.
