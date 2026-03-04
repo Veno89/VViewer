@@ -64,6 +64,7 @@ All notable changes to this project are documented in this file.
 - Added search result navigation keyboard shortcuts (`F3` next, `Shift+F3` previous) and surfaced them in the keyboard shortcuts dialog.
 - Added live-region announcements for active search match changes to improve screen-reader context during navigation.
 - Added large-document performance mode with adaptive degradation (thumbnail render windowing, limited search scan scope, reduced highlight extraction, and explicit user status notices).
+- Added a heavy-workflow reliability matrix document (`TEST_MATRIX_HEAVY_WORKFLOWS.md`) and utility tests for large-document threshold/windowing behavior.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -96,6 +97,7 @@ All notable changes to this project are documented in this file.
 - Added unit tests for shared PDF text-layer normalization and text merge behavior.
 - Added critical workflow coverage with store integration tests (`zoom` clamping, reorder/delete/rotate with undo/redo) and search navigation helper tests.
 - Added architecture/state ownership guidance in `ARCHITECTURE_STATE_OWNERSHIP.md`.
+- Added consistent dialog accessibility behavior (focus trap, Escape-close, and focus return) across onboarding, page range, keyboard help, privacy, and export preview dialogs.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.

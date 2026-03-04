@@ -35,7 +35,9 @@ Scope: Optimization and correctness, feature maturity, attack surface
    - capped search page indexing scope under load
    - reduced search highlight extraction in degraded mode
    - surfaced in-app performance mode status messaging
-- [ ] Next: accessibility consistency pass (focus trap and tab-order verification) + reliability test matrix for heavy workflows.
+- [x] Improved accessibility consistency for core dialogs with focus trapping, Escape close behavior, and focus-return handling.
+- [x] Added heavy-workflow reliability matrix document (`TEST_MATRIX_HEAVY_WORKFLOWS.md`) and utility-level tests for large-document mode thresholds/windowing.
+- [ ] Next: expand integration-level reliability coverage for large-document/search workflows.
 
 ## Executive Summary
 

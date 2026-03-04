@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import type { SessionPersistenceMode } from '@/types/pdf';
 
 interface PrivacyPanelDialogProps {
@@ -8,13 +10,17 @@ interface PrivacyPanelDialogProps {
 }
 
 export function PrivacyPanelDialog({ isOpen, sessionPersistenceMode, onSessionPersistenceModeChange, onClose }: PrivacyPanelDialogProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  useDialogA11y({ isOpen, container: dialogRef.current, onClose, initialFocus: closeButtonRef.current });
+
   if (!isOpen) {
     return null;
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Privacy details">
-      <div className="w-full max-w-lg rounded-2xl border border-cyan-200 bg-white p-5 shadow-2xl dark:border-cyan-900/50 dark:bg-slate-950">
+      <div ref={dialogRef} className="w-full max-w-lg rounded-2xl border border-cyan-200 bg-white p-5 shadow-2xl dark:border-cyan-900/50 dark:bg-slate-950" tabIndex={-1}>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Privacy by Design</h2>
         <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
           <li>- No account required.</li>
@@ -54,6 +60,7 @@ export function PrivacyPanelDialog({ isOpen, sessionPersistenceMode, onSessionPe
           </div>
         </div>
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           className="mt-5 rounded bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700"

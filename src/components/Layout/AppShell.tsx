@@ -189,7 +189,11 @@ export function AppShell({
 
       const target = event.target as HTMLElement | null;
       const tagName = target?.tagName?.toLowerCase() ?? '';
-      const isEditable = target?.isContentEditable || tagName === 'textarea';
+      const isEditable =
+        target?.isContentEditable ||
+        tagName === 'textarea' ||
+        tagName === 'input' ||
+        tagName === 'select';
 
       if (isEditable) {
         return;

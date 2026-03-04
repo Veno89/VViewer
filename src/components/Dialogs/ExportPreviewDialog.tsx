@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import type { ExportProfile } from '@/services/pdfExporter';
 
 interface ExportPreviewDialogProps {
@@ -23,13 +25,17 @@ export function ExportPreviewDialog({
   onClose,
   onConfirm,
 }: ExportPreviewDialogProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
+  useDialogA11y({ isOpen, container: dialogRef.current, onClose, initialFocus: confirmButtonRef.current });
+
   if (!isOpen) {
     return null;
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Export preview">
-      <div className="w-full max-w-lg rounded-2xl border border-cyan-200 bg-white p-5 shadow-2xl dark:border-cyan-900/50 dark:bg-slate-950">
+      <div ref={dialogRef} className="w-full max-w-lg rounded-2xl border border-cyan-200 bg-white p-5 shadow-2xl dark:border-cyan-900/50 dark:bg-slate-950" tabIndex={-1}>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Export Preview</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Review export settings before downloading.</p>
 
@@ -65,6 +71,7 @@ export function ExportPreviewDialog({
 
         <div className="mt-5 flex gap-2">
           <button
+            ref={confirmButtonRef}
             type="button"
             onClick={onConfirm}
             disabled={isExporting}

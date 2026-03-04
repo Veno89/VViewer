@@ -1,3 +1,6 @@
+import { useRef } from 'react';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
+
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,13 +23,17 @@ const TOUR_STEPS = [
 ];
 
 export function OnboardingModal({ isOpen, onClose, onDisableFuture }: OnboardingModalProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const startButtonRef = useRef<HTMLButtonElement | null>(null);
+  useDialogA11y({ isOpen, container: dialogRef.current, onClose, initialFocus: startButtonRef.current });
+
   if (!isOpen) {
     return null;
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="VViewer onboarding">
-      <div className="w-full max-w-2xl rounded-2xl border border-cyan-200 bg-white p-6 shadow-2xl dark:border-cyan-900/50 dark:bg-slate-950">
+      <div ref={dialogRef} className="w-full max-w-2xl rounded-2xl border border-cyan-200 bg-white p-6 shadow-2xl dark:border-cyan-900/50 dark:bg-slate-950" tabIndex={-1}>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300">Welcome to VViewer</p>
         <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">Fast PDF editing. Zero sign-up.</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
@@ -44,6 +51,7 @@ export function OnboardingModal({ isOpen, onClose, onDisableFuture }: Onboarding
 
         <div className="mt-6 flex flex-wrap gap-2">
           <button
+            ref={startButtonRef}
             type="button"
             onClick={onClose}
             className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700"

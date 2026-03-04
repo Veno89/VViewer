@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 
 interface PageRangeDialogProps {
   isOpen: boolean;
@@ -10,6 +11,9 @@ interface PageRangeDialogProps {
 
 export function PageRangeDialog({ isOpen, totalPages, onClose, onApply, errorMessage }: PageRangeDialogProps) {
   const [value, setValue] = useState('');
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useDialogA11y({ isOpen, container: dialogRef.current, onClose, initialFocus: inputRef.current });
 
   useEffect(() => {
     if (!isOpen) {
@@ -22,8 +26,8 @@ export function PageRangeDialog({ isOpen, totalPages, onClose, onApply, errorMes
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Page range selection">
+      <div ref={dialogRef} className="w-full max-w-md rounded-lg bg-white p-4 shadow-xl" tabIndex={-1}>
         <h2 className="text-lg font-semibold text-gray-900">Page Range Selection</h2>
         <p className="mt-2 text-sm text-gray-600">
           Enter pages like <span className="font-medium">1-3, 5, 8-12</span> (1 to {totalPages}).
@@ -33,6 +37,7 @@ export function PageRangeDialog({ isOpen, totalPages, onClose, onApply, errorMes
           Page Range
         </label>
         <input
+          ref={inputRef}
           id="page-range-input"
           value={value}
           onChange={(event) => setValue(event.target.value)}
