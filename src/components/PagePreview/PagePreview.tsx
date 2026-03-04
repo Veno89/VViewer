@@ -19,6 +19,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const activeRenderTaskRef = useRef<PdfRenderTask | null>(null);
+  const renderQueueRef = useRef<Promise<void>>(Promise.resolve());
   const renderRunRef = useRef(0);
   const lastReportedZoomRef = useRef<number | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -72,6 +73,10 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         return;
       }
 
+      if (renderRunRef.current !== renderRun || unmounted) {
+        return;
+      }
+
       const previousTask = activeRenderTaskRef.current;
       previousTask?.cancel();
       if (previousTask) {
@@ -83,6 +88,10 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
       }
       activeRenderTaskRef.current = null;
 
+      if (renderRunRef.current !== renderRun || unmounted) {
+        return;
+      }
+
       setIsRendering(true);
       setError(null);
 
@@ -91,6 +100,10 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
 
         if (zoomMode !== 'manual') {
           const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
+          if (renderRunRef.current !== renderRun || unmounted) {
+            return;
+          }
+
           const baseViewport = page.getViewport({ scale: 1, rotation: activePage.rotation });
           const containerWidth = Math.max(containerSize.width - 48, 200);
           const containerHeight = Math.max(containerSize.height - 48, 200);
@@ -109,6 +122,10 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         }
 
         const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
+        if (renderRunRef.current !== renderRun || unmounted || !canvasRef.current) {
+          return;
+        }
+
         const viewport = page.getViewport({ scale: clampedScale, rotation: activePage.rotation });
         const context = canvasRef.current.getContext('2d');
 
@@ -147,7 +164,11 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
       }
     };
 
-    void renderActivePage();
+    renderQueueRef.current = renderQueueRef.current
+      .then(renderActivePage)
+      .catch(() => {
+        // Keep render queue alive even if one task fails.
+      });
 
     return () => {
       unmounted = true;
