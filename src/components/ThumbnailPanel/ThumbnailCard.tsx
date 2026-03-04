@@ -57,6 +57,7 @@ export function ThumbnailCard({
               onRotate();
             }}
             aria-label="Rotate page"
+            title="Rotate page 90 degrees clockwise"
           >
             <RotateCw size={14} />
           </button>
@@ -68,6 +69,7 @@ export function ThumbnailCard({
               onDelete();
             }}
             aria-label="Delete page"
+            title="Delete page"
           >
             <Trash2 size={14} />
           </button>

@@ -21,44 +21,49 @@ export function ZoomControls({
   onFitPage,
 }: ZoomControlsProps) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1">
+    <div className="flex items-center gap-2 rounded-lg border border-cyan-200/70 bg-white/85 px-2 py-1 shadow-sm backdrop-blur dark:border-cyan-800/60 dark:bg-slate-900/85">
       <button
         type="button"
         onClick={onZoomOut}
-        className="rounded p-1 text-gray-600 hover:bg-gray-100"
+        className="rounded p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
         aria-label="Zoom out"
+        title="Zoom out"
       >
         <Minus size={16} />
       </button>
       <button
         type="button"
         onClick={onReset}
-        className="rounded px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+        className="rounded px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
         aria-label="Reset zoom"
+        title="Reset zoom to 100%"
       >
         {Math.round(zoom * 100)}%
       </button>
       <button
         type="button"
         onClick={onFitWidth}
-        className={`rounded px-2 py-1 text-xs ${zoomMode === 'fit-width' ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-gray-100'}`}
+        className={`rounded px-2 py-1 text-xs ${zoomMode === 'fit-width' ? 'bg-cyan-100 text-cyan-900 dark:bg-cyan-900/40 dark:text-cyan-100' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
         aria-label="Fit to width"
+        title="Fit page to available width"
       >
         Fit W
       </button>
       <button
         type="button"
         onClick={onFitPage}
-        className={`rounded px-2 py-1 text-xs ${zoomMode === 'fit-page' ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-gray-100'}`}
+        className={`rounded px-2 py-1 text-xs ${zoomMode === 'fit-page' ? 'bg-cyan-100 text-cyan-900 dark:bg-cyan-900/40 dark:text-cyan-100' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
         aria-label="Fit to page"
+        title="Fit entire page in view"
       >
         Fit P
       </button>
       <button
         type="button"
         onClick={onZoomIn}
-        className="rounded p-1 text-gray-600 hover:bg-gray-100"
+        className="rounded p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
         aria-label="Zoom in"
+        title="Zoom in"
       >
         <Plus size={16} />
       </button>

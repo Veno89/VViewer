@@ -90,7 +90,7 @@ export function AppShell({
   );
 
   return (
-    <div className="flex h-screen flex-col bg-gray-100 dark:bg-gray-950">
+    <div className="flex h-screen flex-col bg-transparent">
       <Header
         zoom={zoom}
         zoomMode={zoomMode}
@@ -117,11 +117,11 @@ export function AppShell({
         onToggleTheme={onToggleTheme}
       />
 
-      <div className="border-b border-gray-200 px-3 py-2 lg:hidden dark:border-gray-700">
+      <div className="border-b border-cyan-200/50 px-3 py-2 lg:hidden dark:border-cyan-900/40">
         <button
           type="button"
           onClick={() => setIsSidebarOpen((value) => !value)}
-          className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          className="inline-flex items-center gap-2 rounded border border-cyan-200/70 bg-white/85 px-3 py-1.5 text-xs text-slate-700 shadow-sm dark:border-cyan-800/60 dark:bg-slate-900/85 dark:text-slate-200"
         >
           {isSidebarOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
           {isSidebarOpen ? 'Hide Pages' : 'Show Pages'}
@@ -129,7 +129,7 @@ export function AppShell({
       </div>
 
       {selectedIds.size > 1 && (
-        <div className="border-b border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+        <div className="border-b border-cyan-200 bg-cyan-50/80 px-3 py-2 text-xs text-cyan-900 dark:border-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-100">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>{selectedIds.size} pages selected</span>
             <div className="flex gap-2">
@@ -160,9 +160,9 @@ export function AppShell({
       )}
 
       <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_1fr_288px]">
-        <aside className={`min-h-0 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${isSidebarOpen ? 'block' : 'hidden'} lg:block`}>
+        <aside className={`min-h-0 border-r border-cyan-200/60 bg-white/65 backdrop-blur dark:border-cyan-900/45 dark:bg-slate-950/65 ${isSidebarOpen ? 'block' : 'hidden'} lg:block`}>
           {(isDocumentLoading || isRendering) && (
-            <div className="border-b border-gray-200 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">Rendering thumbnails...</div>
+            <div className="border-b border-slate-200 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">Rendering thumbnails...</div>
           )}
           {documentError && (
             <div className="border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{documentError}</div>

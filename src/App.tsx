@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { OnboardingModal } from '@/components/Dialogs/OnboardingModal';
 import { UndoToast } from '@/components/Dialogs/UndoToast';
 import { PageRangeDialog } from '@/components/Dialogs/PageRangeDialog';
 import { DropZone } from '@/components/DropZone/DropZone';
@@ -16,6 +17,13 @@ import { clearPersistedSession, loadPersistedSession, persistSession } from '@/u
 const LARGE_FILE_WARNING_BYTES = 50 * 1024 * 1024;
 const PERSIST_DEBOUNCE_MS = 600;
 const MAX_OPERATION_LOG = 30;
+const ONBOARDING_STORAGE_KEY = 'vviewer-onboarding-hidden';
+const LATEST_CHANGELOG_ITEMS = [
+  'Session restore and activity history panel',
+  'Fit-width / fit-page zoom modes with keyboard navigation',
+  'Improved thumbnail drag cues and better rendering stability',
+  'Local-first privacy workflow: no account, no telemetry, no ads',
+];
 
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -28,6 +36,7 @@ export default function App() {
   const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([]);
   const [zoomMode, setZoomMode] = useState<ZoomMode>('manual');
   const [effectiveZoom, setEffectiveZoom] = useState(1);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   const sourceFiles = usePdfStore((state) => state.sourceFiles);
@@ -72,6 +81,11 @@ export default function App() {
     const persisted = loadPersistedSession();
     if (persisted) {
       setRestorableSession(persisted);
+    }
+
+    const hideOnboarding = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    if (hideOnboarding !== 'true') {
+      setIsOnboardingOpen(true);
     }
   }, []);
 
@@ -336,12 +350,10 @@ export default function App() {
       )}
 
       {pages.length === 0 ? (
-        <div className="min-h-screen bg-gray-100 p-6 dark:bg-gray-950">
-          <div className="mx-auto mb-4 max-w-3xl">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">VViewer</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Open a PDF to start rearranging, rotating, and exporting pages.</p>
+        <div className="min-h-screen bg-slate-100 p-6 dark:bg-slate-950">
+          <div className="mx-auto mb-4 max-w-6xl">
             {restorableSession && (
-              <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+              <div className="mb-3 rounded border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
                 <p>
                   Restore previous session from {new Date(restorableSession.savedAt).toLocaleString()}?
                 </p>
@@ -371,19 +383,26 @@ export default function App() {
                 </div>
               </div>
             )}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="mt-3 rounded border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-            >
-              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            </button>
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="rounded-lg border border-cyan-200 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm hover:bg-cyan-50 dark:border-cyan-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                title="Switch between light and dark themes"
+              >
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </button>
+            </div>
           </div>
           <DropZone
             onFilesSelected={(files) => {
               void loadFiles(files);
             }}
             disabled={isLoading}
+            latestChanges={LATEST_CHANGELOG_ITEMS}
+            onOpenOnboarding={() => {
+              setIsOnboardingOpen(true);
+            }}
           />
         </div>
       ) : (
@@ -472,6 +491,17 @@ export default function App() {
         onUndo={() => {
           handleUndo();
           setIsUndoToastVisible(false);
+        }}
+      />
+
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => {
+          setIsOnboardingOpen(false);
+        }}
+        onDisableFuture={() => {
+          window.localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+          setIsOnboardingOpen(false);
         }}
       />
     </>

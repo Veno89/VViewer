@@ -26,6 +26,9 @@ All notable changes to this project are documented in this file.
   - Operation history/activity panel for recent actions.
   - Fit-width and fit-page zoom modes.
   - Drag insertion cues and thumbnail paint optimization (`content-visibility`).
+  - First-load onboarding modal with optional "don't show again" preference.
+  - Expanded contextual guidance with richer toolbar and zoom control tooltips.
+  - Enhanced splash/empty state with product trust messaging and recent updates highlights.
 - Quality tooling:
   - Vitest setup and page-range parser tests.
   - GitHub Actions CI workflow for install, build, and test.
@@ -36,6 +39,7 @@ All notable changes to this project are documented in this file.
 - Store contracts in `src/types/pdf.ts` and `src/stores/pdfStore.ts` extended for persistence snapshots and operation tracking.
 - Layout composition in `src/components/Layout/AppShell.tsx` updated to include bulk action bar and operation history panel.
 - Zoom controls and preview rendering updated to support effective zoom reporting and fit modes.
+- Visual design system refreshed with futuristic styling, atmospheric backgrounds, and updated typography.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -44,6 +48,7 @@ All notable changes to this project are documented in this file.
 - Prevented pdf.js detached `ArrayBuffer` warning by cloning worker input bytes before load.
 - Fixed thumbnail cache invalidation so preview thumbnails reflect page rotation changes.
 - Corrected PDF blob typing/creation edge cases in exporter/printer paths.
+- Resolved resize-time pdf.js canvas race by canceling in-flight render tasks before re-rendering.
 
 ### Notes
 - Current build and test status is green (`npm run build`, `npm run test`).

@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PageInfo, ZoomMode } from '@/types/pdf';
-import { renderPageToCanvas } from '@/utils/canvas';
+
+interface PdfRenderTask {
+  promise: Promise<unknown>;
+  cancel: () => void;
+}
 
 interface PagePreviewProps {
   activePage: PageInfo | null;
@@ -14,8 +18,11 @@ interface PagePreviewProps {
 export function PagePreview({ activePage, documents, zoom, zoomMode, onEffectiveZoomChange }: PagePreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const activeRenderTaskRef = useRef<PdfRenderTask | null>(null);
+  const renderRunRef = useRef(0);
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
 
   const activeDocument = useMemo(() => {
     if (!activePage) {
@@ -26,12 +33,44 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
   }, [activePage, documents]);
 
   useEffect(() => {
-    let cancelled = false;
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      setContainerSize({
+        width: Math.max(Math.floor(entry.contentRect.width), 200),
+        height: Math.max(Math.floor(entry.contentRect.height), 200),
+      });
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    let unmounted = false;
+    const renderRun = renderRunRef.current + 1;
+    renderRunRef.current = renderRun;
 
     const renderActivePage = async (): Promise<void> => {
       if (!canvasRef.current || !activePage || !activeDocument) {
+        activeRenderTaskRef.current?.cancel();
+        activeRenderTaskRef.current = null;
         return;
       }
+
+      activeRenderTaskRef.current?.cancel();
+      activeRenderTaskRef.current = null;
 
       setIsRendering(true);
       setError(null);
@@ -42,8 +81,8 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         if (zoomMode !== 'manual') {
           const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
           const baseViewport = page.getViewport({ scale: 1, rotation: activePage.rotation });
-          const containerWidth = Math.max((containerRef.current?.clientWidth ?? 900) - 48, 200);
-          const containerHeight = Math.max((containerRef.current?.clientHeight ?? 700) - 48, 200);
+          const containerWidth = Math.max(containerSize.width - 48, 200);
+          const containerHeight = Math.max(containerSize.height - 48, 200);
 
           if (zoomMode === 'fit-width') {
             scale = containerWidth / baseViewport.width;
@@ -52,23 +91,43 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
           }
         }
 
-        const clampedScale = Math.max(0.5, Math.min(2, scale));
+        const clampedScale = Math.round(Math.max(0.5, Math.min(2, scale)) * 1000) / 1000;
         onEffectiveZoomChange?.(clampedScale);
 
-        await renderPageToCanvas(
-          canvasRef.current,
-          activeDocument,
-          activePage.sourcePageIndex,
-          clampedScale,
-          activePage.rotation,
-        );
+        const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
+        const viewport = page.getViewport({ scale: clampedScale, rotation: activePage.rotation });
+        const context = canvasRef.current.getContext('2d');
+
+        if (!context) {
+          throw new Error('Canvas 2D context is not available.');
+        }
+
+        canvasRef.current.width = Math.ceil(viewport.width);
+        canvasRef.current.height = Math.ceil(viewport.height);
+        context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        const renderTask = page.render({ canvasContext: context, viewport });
+        activeRenderTaskRef.current = renderTask as unknown as PdfRenderTask;
+
+        await renderTask.promise;
+
+        if (renderRunRef.current !== renderRun) {
+          return;
+        }
+
+        activeRenderTaskRef.current = null;
       } catch (renderError) {
-        if (!cancelled) {
+        const maybeError = renderError as { name?: string; message?: string };
+        if (maybeError?.name === 'RenderingCancelledException') {
+          return;
+        }
+
+        if (!unmounted && renderRunRef.current === renderRun) {
           const message = renderError instanceof Error ? renderError.message : 'Failed to render page.';
           setError(message);
         }
       } finally {
-        if (!cancelled) {
+        if (!unmounted && renderRunRef.current === renderRun) {
           setIsRendering(false);
         }
       }
@@ -77,9 +136,11 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
     void renderActivePage();
 
     return () => {
-      cancelled = true;
+      unmounted = true;
+      activeRenderTaskRef.current?.cancel();
+      activeRenderTaskRef.current = null;
     };
-  }, [activeDocument, activePage, onEffectiveZoomChange, zoom, zoomMode]);
+  }, [activeDocument, activePage, containerSize.height, containerSize.width, onEffectiveZoomChange, zoom, zoomMode]);
 
   if (!activePage) {
     return (
