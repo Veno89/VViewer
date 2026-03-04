@@ -54,6 +54,8 @@ All notable changes to this project are documented in this file.
 - Extracted operation timeline/log state and log helpers from `src/App.tsx` into `src/hooks/useOperationLog.ts` to reduce top-level orchestration coupling.
 - Extracted PDF import/load file handling from `src/App.tsx` into `src/hooks/usePdfImport.ts` to improve separation of concerns and keep top-level orchestration smaller.
 - Extracted export/print/extract orchestration and export progress/profile state from `src/App.tsx` into `src/hooks/usePdfExport.ts`.
+- Extracted session restore/history persistence orchestration from `src/App.tsx` into `src/hooks/useSessionRecovery.ts`.
+- Updated `README.md` to reflect current shipped capabilities, architecture layout, scripts, and production caching notes.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -83,6 +85,8 @@ All notable changes to this project are documented in this file.
 - Added a general selectable text layer in preview so users can mark/copy embedded PDF text directly (independent of search).
 - Clarified thumbnail rotation labels by showing `Original` for unrotated pages instead of `0deg`.
 - Added unit tests for shared PDF text-layer normalization and text merge behavior.
+- Added critical workflow coverage with store integration tests (`zoom` clamping, reorder/delete/rotate with undo/redo) and search navigation helper tests.
+- Added architecture/state ownership guidance in `ARCHITECTURE_STATE_OWNERSHIP.md`.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.

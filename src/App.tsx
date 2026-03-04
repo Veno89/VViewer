@@ -11,19 +11,12 @@ import { usePdfExport } from '@/hooks/usePdfExport';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useOperationLog } from '@/hooks/useOperationLog';
 import { usePdfImport } from '@/hooks/usePdfImport';
+import { useSessionRecovery } from '@/hooks/useSessionRecovery';
 import { useTheme } from '@/hooks/useTheme';
 import { usePdfStore } from '@/stores/pdfStore';
-import type { PersistedPdfSession, ZoomMode } from '@/types/pdf';
+import type { ZoomMode } from '@/types/pdf';
 import { parsePageRangeInput } from '@/utils/pageRange';
 import { dedupePagesBySource, sortPagesByOriginalOrder } from '@/utils/pageTools';
-import {
-  clearPersistedSession,
-  clearPersistedSessionHistory,
-  loadPersistedSession,
-  loadSessionHistory,
-  persistSession,
-  persistSessionHistory,
-} from '@/utils/sessionStorage';
 
 const LARGE_FILE_WARNING_BYTES = 50 * 1024 * 1024;
 const PERSIST_DEBOUNCE_MS = 600;
@@ -43,8 +36,6 @@ export default function App() {
   const [rangeDialogError, setRangeDialogError] = useState<string | null>(null);
   const [isUndoToastVisible, setIsUndoToastVisible] = useState(false);
   const [undoMessage, setUndoMessage] = useState('Action completed');
-  const [restorableSession, setRestorableSession] = useState<PersistedPdfSession | null>(null);
-  const [sessionHistory, setSessionHistory] = useState<PersistedPdfSession[]>([]);
   const [zoomMode, setZoomMode] = useState<ZoomMode>('manual');
   const [effectiveZoom, setEffectiveZoom] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,31 +76,27 @@ export default function App() {
   const setError = usePdfStore((state) => state.setError);
 
   useEffect(() => {
-    const persisted = loadPersistedSession();
-    if (persisted) {
-      setRestorableSession(persisted);
-    }
-
-    setSessionHistory(loadSessionHistory().slice(0, MAX_SESSION_HISTORY));
-
     const hideOnboarding = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
     if (hideOnboarding !== 'true') {
       setIsOnboardingOpen(true);
     }
   }, []);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const snapshot = getSessionSnapshot();
-      persistSession(snapshot);
-      persistSessionHistory(snapshot);
-      setSessionHistory(loadSessionHistory().slice(0, MAX_SESSION_HISTORY));
-    }, PERSIST_DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [getSessionSnapshot, pages, sourceFiles, selectedIds, activePageId, zoom]);
+  const {
+    restorableSession,
+    sessionHistory,
+    restorePreviousSession,
+    dismissPreviousSession,
+    restoreHistorySnapshot,
+  } = useSessionRecovery({
+    maxSessionHistory: MAX_SESSION_HISTORY,
+    persistDebounceMs: PERSIST_DEBOUNCE_MS,
+    getSessionSnapshot,
+    persistDeps: [pages, sourceFiles, selectedIds, activePageId, zoom],
+    hydrateSession,
+    clearDocument,
+    addOperationLogFromCurrentState,
+  });
 
   const { fileInputRef, openFileDialog, loadFiles, handleHiddenInputChange } = usePdfImport({
     loadPdf,
@@ -333,24 +320,14 @@ export default function App() {
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      hydrateSession(restorableSession);
-                      setRestorableSession(null);
-                      addOperationLogFromCurrentState('Restored previous session');
-                    }}
+                    onClick={restorePreviousSession}
                     className="rounded bg-blue-600 px-2.5 py-1 text-white hover:bg-blue-700"
                   >
                     Restore
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      clearPersistedSession();
-                      clearPersistedSessionHistory();
-                      clearDocument();
-                      setRestorableSession(null);
-                      setSessionHistory([]);
-                    }}
+                    onClick={dismissPreviousSession}
                     className="rounded border border-blue-300 px-2.5 py-1 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900/50"
                   >
                     Dismiss
@@ -368,9 +345,7 @@ export default function App() {
                       key={snapshot.savedAt}
                       type="button"
                       onClick={() => {
-                        hydrateSession(snapshot);
-                        setRestorableSession(null);
-                        addOperationLogFromCurrentState(`Restored snapshot ${new Date(snapshot.savedAt).toLocaleTimeString()}`);
+                        restoreHistorySnapshot(snapshot);
                       }}
                       className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
                     >

@@ -1,79 +1,107 @@
-# VViewer — PDF Page Editor
+# VViewer - Client-Side PDF Editor
 
-A modern, client-side PDF viewer and page editor built with React + TypeScript. All processing happens in the browser — no uploads, no servers, full privacy.
+VViewer is a browser-based PDF editor built with React and TypeScript.
+All document processing happens locally in the browser: no uploads, no accounts, no telemetry.
 
-## Features (Planned)
+## What It Does Today
 
-- **View PDFs** — Fast rendering with page thumbnails and full-page preview
-- **Rearrange Pages** — Drag-and-drop page reordering
-- **Delete Pages** — Remove unwanted pages from a document
-- **Rotate Pages** — Rotate individual pages or all pages at once (90°/180°/270°)
-- **Merge PDFs** — Combine multiple PDF files into one
-- **Split PDFs** — Extract page ranges into separate files
-- **Print** — Print the edited document directly from the browser
-- **Download** — Export the modified PDF
+- Open one or multiple PDFs and merge them into a single working document.
+- Reorder pages with drag-and-drop thumbnails.
+- Multi-select pages and run batch actions.
+- Rotate one page, selected pages, or all pages.
+- Delete one page or selected pages.
+- Select pages by typed ranges (for example `1-3, 7, 10-12`).
+- Undo and redo page-structure actions.
+- Smart tools: sort by original order, dedupe, extract odd pages, extract even pages.
+- Export preview with profile selection and progress updates.
+- Download edited PDF and print directly from the browser.
+- Search embedded text across pages with snippets, result navigation, and in-page highlights.
+- Select and copy embedded text directly from preview.
+- Session restore and timeline snapshots.
+- Keyboard shortcuts help panel and privacy panel.
+- Light and dark themes.
+- Baseline PWA support (manifest + service worker).
 
-## Tech Stack
+## Not Included
+
+- OCR is not implemented yet.
+- Search/highlight/text copy work for PDFs with embedded/selectable text.
+
+## Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Framework | React 18 + TypeScript |
-| Build Tool | Vite |
-| PDF Rendering | Mozilla pdf.js (`pdfjs-dist`) |
-| PDF Manipulation | `pdf-lib` |
-| Drag & Drop | `@dnd-kit/core` + `@dnd-kit/sortable` |
+| --- | --- |
+| UI | React 18 + TypeScript |
+| Build | Vite |
+| Rendering | `pdfjs-dist` |
+| PDF output | `pdf-lib` |
+| DnD | `@dnd-kit/core` + `@dnd-kit/sortable` |
+| State | Zustand |
 | Styling | Tailwind CSS |
-| Icons | Lucide React |
-| State Management | Zustand |
+| Testing | Vitest |
 
-## Getting Started
+## Scripts
 
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
-
-# Build for production
+npm run test
 npm run build
+npm run preview
 ```
 
-## Important: Run With Vite
+## Development Notes
 
-Do not open `index.html` directly with Live Server for development.
+- Run via Vite dev server, not Live Server.
+- Do not open `index.html` directly.
+- Typical local URL: `http://localhost:5173/`.
 
-- `src/main.tsx` is TypeScript/TSX and must be transformed by Vite.
-- Opening through Live Server can trigger MIME errors such as `application/octet-stream` for module files.
-- Use the Vite URL shown in terminal, typically `http://localhost:5173/`.
+## Production and Caching
 
-## Architecture
+- A service worker is used in production builds.
+- `public/_headers` configures no-cache behavior for `sw.js` and `index.html` on Netlify.
+- If a deploy looks stale, hard refresh once (`Ctrl+F5`) to force update.
 
-```
+## Project Structure
+
+```text
 src/
-├── components/          # React UI components
-│   ├── Layout/          # App shell, header, sidebar
-│   ├── Toolbar/         # Action buttons (rotate, delete, print...)
-│   ├── ThumbnailPanel/  # Draggable page thumbnail grid
-│   ├── PagePreview/     # Full-size page viewer
-│   └── Dialogs/         # Modals (merge, split, confirm)
-├── hooks/               # Custom React hooks
-│   ├── usePdfDocument.ts
-│   ├── usePdfRenderer.ts
-│   └── useDragAndDrop.ts
-├── stores/              # Zustand state stores
-│   └── pdfStore.ts      # Core PDF state (pages, order, rotations)
-├── services/            # Business logic (no UI)
-│   ├── pdfLoader.ts     # Load PDF via pdf.js
-│   ├── pdfExporter.ts   # Build new PDF via pdf-lib
-│   └── pdfPrinter.ts    # Print via iframe/window
-├── types/               # TypeScript type definitions
-│   └── pdf.ts
-├── utils/               # Helpers
-│   └── canvas.ts        # Canvas rendering utilities
-├── App.tsx
-└── main.tsx
+	components/
+		Dialogs/
+		DropZone/
+		Layout/
+		PagePreview/
+		ThumbnailPanel/
+		Toolbar/
+	hooks/
+		useKeyboardShortcuts.ts
+		useOperationLog.ts
+		usePdfDocument.ts
+		usePdfExport.ts
+		usePdfImport.ts
+		usePdfRenderer.ts
+		usePdfTextSearch.ts
+		useTheme.ts
+	services/
+		pdfExporter.ts
+		pdfLoader.ts
+		pdfPrinter.ts
+	stores/
+		pdfStore.ts
+	types/
+		pdf.ts
+	utils/
+		pageRange.ts
+		pageTools.ts
+		pdfTextLayer.ts
+	App.tsx
+	main.tsx
 ```
+
+## Quality Status
+
+- CI builds and tests run on push/PR (`.github/workflows/ci.yml`).
+- Ongoing hardening/refactor plan is tracked in `AI_AUDIT_IMPROVEMENT_PLAN.md`.
 
 ## License
 

@@ -8,6 +8,7 @@ import { usePdfDocument } from '@/hooks/usePdfDocument';
 import { usePdfTextSearch } from '@/hooks/usePdfTextSearch';
 import { usePdfRenderer } from '@/hooks/usePdfRenderer';
 import type { OperationLogEntry, PageInfo, PdfSourceFile, ZoomMode } from '@/types/pdf';
+import { normalizeSearchMatchIndex, resolveActiveSearchMatchIndex } from '@/utils/searchNavigation';
 
 interface AppShellProps {
   sourceFiles: PdfSourceFile[];
@@ -117,20 +118,7 @@ export function AppShell({
   const activeSearchHighlights = activePage ? highlightsByPage[activePage.id] ?? [] : [];
 
   useEffect(() => {
-    if (searchMatches.length === 0) {
-      setActiveSearchMatchIndex(0);
-      return;
-    }
-
-    if (activePageId) {
-      const selectedIndex = searchMatches.findIndex((match) => match.pageId === activePageId);
-      if (selectedIndex >= 0) {
-        setActiveSearchMatchIndex(selectedIndex);
-        return;
-      }
-    }
-
-    setActiveSearchMatchIndex((previous) => Math.min(previous, searchMatches.length - 1));
+    setActiveSearchMatchIndex((previous) => resolveActiveSearchMatchIndex(searchMatches, activePageId, previous));
   }, [activePageId, searchMatches]);
 
   const openSearchMatchAt = (index: number) => {
@@ -138,7 +126,7 @@ export function AppShell({
       return;
     }
 
-    const normalizedIndex = ((index % searchMatches.length) + searchMatches.length) % searchMatches.length;
+    const normalizedIndex = normalizeSearchMatchIndex(index, searchMatches.length);
     const target = searchMatches[normalizedIndex];
     if (!target) {
       return;

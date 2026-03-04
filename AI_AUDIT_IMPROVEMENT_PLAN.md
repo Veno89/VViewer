@@ -6,13 +6,13 @@ Scope: Optimization and correctness, feature maturity, attack surface
 ## Implementation Status
 
 - [x] Phase 1, Item 1: Unified text extraction geometry pipeline into shared utility and migrated search/preview consumers (`f49d297`).
-- [ ] Phase 1, Item 2: Extract feature-specific hooks from `src/App.tsx`.
+- [x] Phase 1, Item 2: Extract feature-specific hooks from `src/App.tsx`.
    - [x] Extracted operation log responsibility into `src/hooks/useOperationLog.ts` and integrated in `App.tsx`.
    - [x] Extracted import/load workflow into `src/hooks/usePdfImport.ts` and integrated in `App.tsx`.
    - [x] Extracted export/print and extraction workflow into `src/hooks/usePdfExport.ts` and integrated in `App.tsx`.
-   - [ ] Remaining extractions: session persistence/recovery.
-- [ ] Phase 1, Item 4: Add integration tests for critical workflows.
-- [ ] Phase 1, Item 5: Add architecture note for state ownership.
+   - [x] Extracted session persistence/recovery into `src/hooks/useSessionRecovery.ts` and integrated in `App.tsx`.
+- [x] Phase 1, Item 4: Add integration tests for critical workflows.
+- [x] Phase 1, Item 5: Add architecture note for state ownership.
 - [ ] Phase 2 onward: Not started.
 
 ## Executive Summary
