@@ -78,7 +78,7 @@ export function ThumbnailCard({
 
       <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
         <span>Page {page.sourcePageIndex + 1}</span>
-        <span>{page.rotation}deg</span>
+        <span>{page.rotation === 0 ? 'Original' : `${page.rotation}deg`}</span>
       </div>
     </div>
   );

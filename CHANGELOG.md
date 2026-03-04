@@ -76,6 +76,8 @@ All notable changes to this project are documented in this file.
 - Fixed `+/-` zoom controls by wiring `PagePreview` to the store zoom state (manual zoom source of truth) while keeping header zoom readout based on effective fit/manual zoom.
 - Fixed Power Panel horizontal clipping by making it match its grid column width, and adjusted Smart Tools tooltip anchoring to prevent edge overflow near the browser window.
 - Added in-document search highlights for text-based PDFs (no OCR) and Power Panel match navigation with previous/next controls and active match position.
+- Added a general selectable text layer in preview so users can mark/copy embedded PDF text directly (independent of search).
+- Clarified thumbnail rotation labels by showing `Original` for unrotated pages instead of `0deg`.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.

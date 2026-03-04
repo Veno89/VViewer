@@ -12,6 +12,14 @@ interface PagePreviewProps {
   onEffectiveZoomChange?: (zoom: number) => void;
 }
 
+interface TextLayerItem {
+  text: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighlights = [], onEffectiveZoomChange }: PagePreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -23,6 +31,8 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
   const [showRenderingHint, setShowRenderingHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
+  const [textLayerItems, setTextLayerItems] = useState<TextLayerItem[]>([]);
+  const [canvasPixels, setCanvasPixels] = useState({ width: 0, height: 0 });
   const manualZoomDependency = zoomMode === 'manual' ? zoom : 1;
 
   const cancelCurrentRender = useCallback(async () => {
@@ -72,6 +82,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
 
     if (!canvasRef.current || !activePage || !activeDocument) {
       void cancelCurrentRender();
+      setTextLayerItems([]);
       return;
     }
 
@@ -83,6 +94,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
 
       setIsRendering(true);
       setError(null);
+      setTextLayerItems([]);
       // Only show the indicator if the render takes more than 300 ms.
       if (renderTimerRef.current) clearTimeout(renderTimerRef.current);
       renderTimerRef.current = setTimeout(() => { setShowRenderingHint(true); }, 300);
@@ -113,11 +125,13 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
         if (stale() || !canvasRef.current) return;
 
         const viewport = page.getViewport({ scale: clampedScale, rotation: activePage.rotation });
+        const textLayerViewport = page.getViewport({ scale: 1, rotation: activePage.rotation });
         const canvas = canvasRef.current;
 
         // Resetting width/height clears the canvas and any internal pdf.js state tied to it.
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
+        setCanvasPixels({ width: canvas.width, height: canvas.height });
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas 2D context is not available.');
 
@@ -126,6 +140,46 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
 
         await task.promise;
         renderTaskRef.current = null;
+
+        const textContent = await page.getTextContent();
+        if (stale()) return;
+
+        const nextTextLayerItems = textContent.items
+          .map((item) => {
+            if (!('str' in item) || typeof item.str !== 'string' || !('transform' in item)) {
+              return null;
+            }
+
+            const transform = Array.isArray(item.transform) ? item.transform : null;
+            if (!transform || transform.length < 6 || !('width' in item)) {
+              return null;
+            }
+
+            const rawHeight = Math.max(Math.abs(transform[3]), 8);
+            const rawWidth = typeof item.width === 'number' ? Math.max(item.width, 1) : 1;
+            const rawLeft = transform[4];
+            const rawTop = textLayerViewport.height - transform[5] - rawHeight;
+
+            const clampedLeft = Math.max(0, Math.min(textLayerViewport.width, rawLeft));
+            const clampedTop = Math.max(0, Math.min(textLayerViewport.height, rawTop));
+            const clampedWidth = Math.max(0, Math.min(textLayerViewport.width - clampedLeft, rawWidth));
+            const clampedHeight = Math.max(0, Math.min(textLayerViewport.height - clampedTop, rawHeight));
+
+            if (item.str.trim().length === 0 || clampedWidth <= 0 || clampedHeight <= 0) {
+              return null;
+            }
+
+            return {
+              text: item.str,
+              left: clampedLeft / textLayerViewport.width,
+              top: clampedTop / textLayerViewport.height,
+              width: clampedWidth / textLayerViewport.width,
+              height: clampedHeight / textLayerViewport.height,
+            };
+          })
+          .filter((item): item is TextLayerItem => Boolean(item));
+
+        setTextLayerItems(nextTextLayerItems);
       } catch (err: unknown) {
         if (stale()) return;
         // Silently swallow any cancellation or canvas-conflict error from pdf.js.
@@ -168,8 +222,27 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
       )}
       <div className="relative inline-block">
         <canvas ref={canvasRef} className="rounded-md bg-white shadow-lg" />
+        {textLayerItems.length > 0 && (
+          <div className="preview-text-layer absolute inset-0 z-10 overflow-hidden select-text">
+            {textLayerItems.map((item, index) => (
+              <span
+                key={`${item.left}-${item.top}-${index}`}
+                className="absolute whitespace-pre leading-none"
+                style={{
+                  left: `${Math.max(0, Math.min(1, item.left)) * 100}%`,
+                  top: `${Math.max(0, Math.min(1, item.top)) * 100}%`,
+                  width: `${Math.max(0, Math.min(1, item.width)) * 100}%`,
+                  height: `${Math.max(0, Math.min(1, item.height)) * 100}%`,
+                  fontSize: `${Math.max(item.height * canvasPixels.height, 8)}px`,
+                }}
+              >
+                {item.text}
+              </span>
+            ))}
+          </div>
+        )}
         {searchHighlights.length > 0 && (
-          <div className="pointer-events-none absolute inset-0">
+          <div className="pointer-events-none absolute inset-0 z-20">
             {searchHighlights.map((rect, index) => (
               <span
                 key={`${rect.left}-${rect.top}-${index}`}
