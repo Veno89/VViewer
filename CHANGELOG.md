@@ -68,6 +68,9 @@ All notable changes to this project are documented in this file.
 - Updated pdf.js cancel handling to tolerate both `RenderingCancelledException` and `RenderingCancelled` variants without surfacing false errors.
 - Fixed Power Panel tooltip clipping by separating fixed controls from the scrollable activity area.
 - Corrected drag-time thumbnail shrink/disappear artifacts by switching sortable item transforms from `CSS.Transform` to `CSS.Translate` when using drag overlays.
+- Fixed drag-and-drop collapse/z-index issues by removing extra wrapper div around sortable items that broke `@dnd-kit` layout measurements, and raising overlay z-index.
+- Switched Power Panel tooltips to native `title` attributes for guaranteed cross-layout visibility.
+- Added delayed rendering indicator (300 ms) to prevent flash during fast fit-mode transitions, and broadened pdf.js error suppression for canvas-conflict messages.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.
