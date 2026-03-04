@@ -49,6 +49,7 @@ All notable changes to this project are documented in this file.
 - Visual design system refreshed with futuristic styling, atmospheric backgrounds, and updated typography.
 - Export pipeline now supports lightweight profiles and cooperative yielding to reduce UI jank on large exports.
 - Added baseline offline install support via web manifest and service worker registration.
+- Thumbnail panel rendering strategy simplified during drag interactions to prioritize stability over aggressive virtualization.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -61,9 +62,11 @@ All notable changes to this project are documented in this file.
 - Improved large-document thumbnail performance via viewport-based rendering window.
 - Stabilized drag-and-drop thumbnail behavior by introducing a drag overlay ghost preview and safer drag-state reset handling.
 - Prevented thumbnail preview disappearance during drag by disabling virtualization paint optimizations while actively dragging.
+- Addressed intermittent fit-width/fit-page canvas render overlap warning by serializing render task cancellation before starting new renders.
+- Removed fit-mode render feedback loops that could trigger redundant preview render cycles.
 
 ### UX
-- Added more informative tooltips and helper text for Power Panel search and smart tool actions.
+- Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.
 
 ### Notes
 - Current build and test status is green (`npm run build`, `npm run test`).

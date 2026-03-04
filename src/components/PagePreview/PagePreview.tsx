@@ -20,9 +20,11 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const activeRenderTaskRef = useRef<PdfRenderTask | null>(null);
   const renderRunRef = useRef(0);
+  const lastReportedZoomRef = useRef<number | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
+  const manualZoomDependency = zoomMode === 'manual' ? zoom : 1;
 
   const activeDocument = useMemo(() => {
     if (!activePage) {
@@ -61,6 +63,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
     let unmounted = false;
     const renderRun = renderRunRef.current + 1;
     renderRunRef.current = renderRun;
+    const manualZoom = manualZoomDependency;
 
     const renderActivePage = async (): Promise<void> => {
       if (!canvasRef.current || !activePage || !activeDocument) {
@@ -69,14 +72,22 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         return;
       }
 
-      activeRenderTaskRef.current?.cancel();
+      const previousTask = activeRenderTaskRef.current;
+      previousTask?.cancel();
+      if (previousTask) {
+        try {
+          await previousTask.promise;
+        } catch {
+          // Expected when cancellation interrupts an in-flight render task.
+        }
+      }
       activeRenderTaskRef.current = null;
 
       setIsRendering(true);
       setError(null);
 
       try {
-        let scale = zoom;
+        let scale = manualZoom;
 
         if (zoomMode !== 'manual') {
           const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
@@ -92,7 +103,10 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         }
 
         const clampedScale = Math.round(Math.max(0.5, Math.min(2, scale)) * 1000) / 1000;
-        onEffectiveZoomChange?.(clampedScale);
+        if (lastReportedZoomRef.current !== clampedScale) {
+          lastReportedZoomRef.current = clampedScale;
+          onEffectiveZoomChange?.(clampedScale);
+        }
 
         const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
         const viewport = page.getViewport({ scale: clampedScale, rotation: activePage.rotation });
@@ -140,7 +154,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
       activeRenderTaskRef.current?.cancel();
       activeRenderTaskRef.current = null;
     };
-  }, [activeDocument, activePage, containerSize.height, containerSize.width, onEffectiveZoomChange, zoom, zoomMode]);
+  }, [activeDocument, activePage, containerSize.height, containerSize.width, manualZoomDependency, onEffectiveZoomChange, zoomMode]);
 
   if (!activePage) {
     return (

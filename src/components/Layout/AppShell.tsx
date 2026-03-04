@@ -101,12 +101,8 @@ export function AppShell({
   onRestoreSnapshot,
 }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [visibleThumbnailIds, setVisibleThumbnailIds] = useState<Set<string>>(new Set());
   const { documents, isLoading: isDocumentLoading, error: documentError } = usePdfDocument(sourceFiles);
-  const renderIds = useMemo(
-    () => (visibleThumbnailIds.size > 0 ? visibleThumbnailIds : new Set(pages.map((page) => page.id))),
-    [pages, visibleThumbnailIds],
-  );
+  const renderIds = useMemo(() => new Set(pages.map((page) => page.id)), [pages]);
   const { thumbnails, isRendering } = usePdfRenderer(pages, documents, renderIds);
   const { matches: searchMatches, isIndexing: isIndexingSearch } = usePdfTextSearch(searchQuery, pages, documents);
 
@@ -202,7 +198,6 @@ export function AppShell({
             onSelect={onSelectPage}
             onRotate={onRotatePage}
             onDelete={onDeletePage}
-            onVisibleIdsChange={setVisibleThumbnailIds}
           />
         </aside>
 
