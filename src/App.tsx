@@ -8,12 +8,13 @@ import { UndoToast } from '@/components/Dialogs/UndoToast';
 import { DropZone } from '@/components/DropZone/DropZone';
 import { AppShell } from '@/components/Layout/AppShell';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useOperationLog } from '@/hooks/useOperationLog';
 import { useTheme } from '@/hooks/useTheme';
 import { downloadPdf, exportPdf, type ExportProfile } from '@/services/pdfExporter';
 import { readFileAsUint8Array } from '@/services/pdfLoader';
 import { printPdf } from '@/services/pdfPrinter';
 import { usePdfStore } from '@/stores/pdfStore';
-import type { OperationLogEntry, PageInfo, PersistedPdfSession, ZoomMode } from '@/types/pdf';
+import type { PageInfo, PersistedPdfSession, ZoomMode } from '@/types/pdf';
 import { parsePageRangeInput } from '@/utils/pageRange';
 import { dedupePagesBySource, filterEvenPagesByCurrentOrder, filterOddPagesByCurrentOrder, sortPagesByOriginalOrder } from '@/utils/pageTools';
 import {
@@ -27,7 +28,6 @@ import {
 
 const LARGE_FILE_WARNING_BYTES = 50 * 1024 * 1024;
 const PERSIST_DEBOUNCE_MS = 600;
-const MAX_OPERATION_LOG = 40;
 const MAX_SESSION_HISTORY = 5;
 const ONBOARDING_STORAGE_KEY = 'vviewer-onboarding-hidden';
 const LATEST_CHANGELOG_ITEMS = [
@@ -36,10 +36,6 @@ const LATEST_CHANGELOG_ITEMS = [
   'Smart tools: sort original, dedupe, and odd/even extraction',
   'Export preview with profile presets and progress tracking',
 ];
-
-function clonePages(pages: PageInfo[]): PageInfo[] {
-  return pages.map((page) => ({ ...page }));
-}
 
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -51,7 +47,6 @@ export default function App() {
   const [undoMessage, setUndoMessage] = useState('Action completed');
   const [restorableSession, setRestorableSession] = useState<PersistedPdfSession | null>(null);
   const [sessionHistory, setSessionHistory] = useState<PersistedPdfSession[]>([]);
-  const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([]);
   const [zoomMode, setZoomMode] = useState<ZoomMode>('manual');
   const [effectiveZoom, setEffectiveZoom] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,8 +57,8 @@ export default function App() {
   const [exportProfile, setExportProfile] = useState<ExportProfile>('balanced');
   const [exportProgress, setExportProgress] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
-  const [liveAnnouncement, setLiveAnnouncement] = useState('');
   const { theme, toggleTheme } = useTheme();
+  const { operationLog, liveAnnouncement, addOperationLogFromCurrentState } = useOperationLog();
 
   const sourceFiles = usePdfStore((state) => state.sourceFiles);
   const pages = usePdfStore((state) => state.pages);
@@ -93,26 +88,6 @@ export default function App() {
   const undo = usePdfStore((state) => state.undo);
   const redo = usePdfStore((state) => state.redo);
   const setError = usePdfStore((state) => state.setError);
-
-  const addOperationLog = useCallback((label: string, snapshotPages?: PageInfo[]): void => {
-    const entry: OperationLogEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      label,
-      timestamp: new Date().toISOString(),
-      snapshotPages,
-    };
-
-    setOperationLog((previous) => [entry, ...previous].slice(0, MAX_OPERATION_LOG));
-    setLiveAnnouncement(label);
-  }, []);
-
-  const addOperationLogFromCurrentState = useCallback(
-    (label: string): void => {
-      const currentPages = clonePages(usePdfStore.getState().pages);
-      addOperationLog(label, currentPages);
-    },
-    [addOperationLog],
-  );
 
   useEffect(() => {
     const persisted = loadPersistedSession();
