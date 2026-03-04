@@ -541,7 +541,8 @@ export default function App() {
           pages={pages}
           selectedIds={selectedIds}
           activePageId={activePageId}
-          zoom={effectiveZoom}
+          zoom={zoom}
+          displayZoom={effectiveZoom}
           zoomMode={zoomMode}
           canUndo={history.length > 0}
           canRedo={future.length > 0}

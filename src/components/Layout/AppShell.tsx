@@ -15,6 +15,7 @@ interface AppShellProps {
   selectedIds: Set<string>;
   activePageId: string | null;
   zoom: number;
+  displayZoom: number;
   zoomMode: ZoomMode;
   canUndo: boolean;
   canRedo: boolean;
@@ -61,6 +62,7 @@ export function AppShell({
   selectedIds,
   activePageId,
   zoom,
+  displayZoom,
   zoomMode,
   canUndo,
   canRedo,
@@ -114,7 +116,7 @@ export function AppShell({
   return (
     <div className="flex h-screen flex-col bg-transparent">
       <Header
-        zoom={zoom}
+        zoom={displayZoom}
         zoomMode={zoomMode}
         hasPages={pages.length > 0}
         hasSelection={selectedIds.size > 0}
