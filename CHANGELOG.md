@@ -58,6 +58,9 @@ All notable changes to this project are documented in this file.
 - Updated `README.md` to reflect current shipped capabilities, architecture layout, scripts, and production caching notes.
 - Added session persistence modes (`metadata-only` default, `full` opt-in) and wired recovery/persistence behavior to selected mode.
 - Added privacy panel controls so users can choose local session storage depth (metadata only vs full document bytes).
+- Expanded deployment security headers in `public/_headers` with CSP, frame protections, MIME-sniffing protection, permissions policy, and cross-origin isolation-related directives.
+- Tightened service worker caching to an explicit app-shell/static asset allowlist instead of broad same-origin GET caching.
+- Added CI vulnerability gating for high/critical production dependency advisories via `npm audit --audit-level=high --omit=dev`.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.

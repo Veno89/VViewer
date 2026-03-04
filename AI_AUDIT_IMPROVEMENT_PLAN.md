@@ -21,7 +21,10 @@ Scope: Optimization and correctness, feature maturity, attack surface
    - default `metadata-only`
    - optional explicit `full` mode for byte-level restore
 - [x] Added user-facing privacy setting in `PrivacyPanelDialog` for persistence mode selection.
-- [ ] Next: security headers expansion, tighter SW cache allowlist, CI vulnerability gates.
+- [x] Expanded security headers in `public/_headers` (CSP, framing, MIME sniffing, referrer, permissions, isolation policies).
+- [x] Tightened service worker cache scope to explicit app-shell/static asset allowlist.
+- [x] Added CI dependency vulnerability gate for high/critical production advisories (`npm audit --audit-level=high --omit=dev`).
+- [ ] Next: Phase 3 feature maturity and UX reliability work.
 
 ## Executive Summary
 

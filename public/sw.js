@@ -1,5 +1,24 @@
 const CACHE_NAME = 'vviewer-static-v2';
 const CORE_ASSETS = ['/', '/manifest.webmanifest'];
+const STATIC_ASSET_PATTERN = /\.(?:js|mjs|css|woff2|woff|ttf|svg|png|jpg|jpeg|gif|webp|ico)$/i;
+
+function shouldCacheRequest(requestUrl) {
+  const { pathname } = requestUrl;
+
+  if (pathname === '/sw.js') {
+    return false;
+  }
+
+  if (pathname === '/' || pathname === '/index.html' || pathname === '/manifest.webmanifest') {
+    return true;
+  }
+
+  if (pathname.startsWith('/assets/')) {
+    return true;
+  }
+
+  return STATIC_ASSET_PATTERN.test(pathname);
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -61,6 +80,11 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
+      if (!isSameOrigin || !shouldCacheRequest(requestUrl)) {
+        return fetch(event.request)
+          .catch(() => cached);
+      }
+
       const networkUpdate = fetch(event.request)
         .then((response) => {
           if (!response || response.status !== 200 || response.type !== 'basic') {
