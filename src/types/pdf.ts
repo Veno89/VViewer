@@ -1,5 +1,6 @@
 export type PageRotation = 0 | 90 | 180 | 270;
 export type ZoomMode = 'manual' | 'fit-width' | 'fit-page';
+export type SessionPersistenceMode = 'metadata-only' | 'full';
 
 export interface PdfSourceFile {
   index: number;
@@ -18,7 +19,7 @@ export interface PageInfo {
 export interface PersistedPdfSourceFile {
   index: number;
   name: string;
-  bytesBase64: string;
+  bytesBase64?: string;
   pageCount: number;
 }
 
@@ -67,8 +68,8 @@ export interface PdfStateActions {
   setZoom: (zoom: number) => void;
   clearDocument: () => void;
   restorePagesSnapshot: (pages: PageInfo[]) => void;
-  hydrateSession: (session: PersistedPdfSession) => void;
-  getSessionSnapshot: () => PersistedPdfSession | null;
+  hydrateSession: (session: PersistedPdfSession) => boolean;
+  getSessionSnapshot: (options?: { includeDocumentBytes?: boolean }) => PersistedPdfSession | null;
   undo: () => void;
   redo: () => void;
   setError: (message: string | null) => void;

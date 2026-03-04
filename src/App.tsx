@@ -17,6 +17,7 @@ import { usePdfStore } from '@/stores/pdfStore';
 import type { ZoomMode } from '@/types/pdf';
 import { parsePageRangeInput } from '@/utils/pageRange';
 import { dedupePagesBySource, sortPagesByOriginalOrder } from '@/utils/pageTools';
+import { loadSessionPersistenceMode, saveSessionPersistenceMode } from '@/utils/privacySettings';
 
 const LARGE_FILE_WARNING_BYTES = 50 * 1024 * 1024;
 const PERSIST_DEBOUNCE_MS = 600;
@@ -39,6 +40,7 @@ export default function App() {
   const [zoomMode, setZoomMode] = useState<ZoomMode>('manual');
   const [effectiveZoom, setEffectiveZoom] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sessionPersistenceMode, setSessionPersistenceMode] = useState(loadSessionPersistenceMode);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
   const [isKeyboardHelpOpen, setIsKeyboardHelpOpen] = useState(false);
@@ -91,12 +93,17 @@ export default function App() {
   } = useSessionRecovery({
     maxSessionHistory: MAX_SESSION_HISTORY,
     persistDebounceMs: PERSIST_DEBOUNCE_MS,
+    sessionPersistenceMode,
     getSessionSnapshot,
     persistDeps: [pages, sourceFiles, selectedIds, activePageId, zoom],
     hydrateSession,
     clearDocument,
     addOperationLogFromCurrentState,
   });
+
+  useEffect(() => {
+    saveSessionPersistenceMode(sessionPersistenceMode);
+  }, [sessionPersistenceMode]);
 
   const { fileInputRef, openFileDialog, loadFiles, handleHiddenInputChange } = usePdfImport({
     loadPdf,
@@ -530,6 +537,8 @@ export default function App() {
 
       <PrivacyPanelDialog
         isOpen={isPrivacyPanelOpen}
+        sessionPersistenceMode={sessionPersistenceMode}
+        onSessionPersistenceModeChange={setSessionPersistenceMode}
         onClose={() => {
           setIsPrivacyPanelOpen(false);
         }}

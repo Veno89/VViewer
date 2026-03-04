@@ -1,9 +1,13 @@
+import type { SessionPersistenceMode } from '@/types/pdf';
+
 interface PrivacyPanelDialogProps {
   isOpen: boolean;
+  sessionPersistenceMode: SessionPersistenceMode;
+  onSessionPersistenceModeChange: (mode: SessionPersistenceMode) => void;
   onClose: () => void;
 }
 
-export function PrivacyPanelDialog({ isOpen, onClose }: PrivacyPanelDialogProps) {
+export function PrivacyPanelDialog({ isOpen, sessionPersistenceMode, onSessionPersistenceModeChange, onClose }: PrivacyPanelDialogProps) {
   if (!isOpen) {
     return null;
   }
@@ -19,6 +23,36 @@ export function PrivacyPanelDialog({ isOpen, onClose }: PrivacyPanelDialogProps)
           <li>- No ad network scripts.</li>
           <li>- Session restore data is stored in your browser local storage only.</li>
         </ul>
+        <div className="mt-4 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          <p className="font-semibold">Session Persistence Mode</p>
+          <p className="mt-1">Choose whether local session snapshots include raw PDF bytes.</p>
+          <div className="mt-3 space-y-2">
+            <label className="flex items-start gap-2">
+              <input
+                type="radio"
+                name="session-persistence-mode"
+                checked={sessionPersistenceMode === 'metadata-only'}
+                onChange={() => onSessionPersistenceModeChange('metadata-only')}
+              />
+              <span>
+                <span className="font-medium">Metadata only (recommended)</span>
+                <span className="block text-[11px] text-slate-500 dark:text-slate-400">Stores page order, rotation, and selection metadata without document content.</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="radio"
+                name="session-persistence-mode"
+                checked={sessionPersistenceMode === 'full'}
+                onChange={() => onSessionPersistenceModeChange('full')}
+              />
+              <span>
+                <span className="font-medium">Full session restore</span>
+                <span className="block text-[11px] text-slate-500 dark:text-slate-400">Also stores PDF bytes in local storage so sessions can be reopened without re-importing files.</span>
+              </span>
+            </label>
+          </div>
+        </div>
         <button
           type="button"
           onClick={onClose}

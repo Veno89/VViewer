@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PersistedPdfSession } from '@/types/pdf';
+import type { PersistedPdfSession, SessionPersistenceMode } from '@/types/pdf';
 import {
   clearPersistedSession,
   clearPersistedSessionHistory,
@@ -12,9 +12,10 @@ import {
 interface UseSessionRecoveryOptions {
   maxSessionHistory: number;
   persistDebounceMs: number;
-  getSessionSnapshot: () => PersistedPdfSession | null;
+  sessionPersistenceMode: SessionPersistenceMode;
+  getSessionSnapshot: (options?: { includeDocumentBytes?: boolean }) => PersistedPdfSession | null;
   persistDeps: unknown[];
-  hydrateSession: (session: PersistedPdfSession) => void;
+  hydrateSession: (session: PersistedPdfSession) => boolean;
   clearDocument: () => void;
   addOperationLogFromCurrentState: (label: string) => void;
 }
@@ -22,6 +23,7 @@ interface UseSessionRecoveryOptions {
 export function useSessionRecovery({
   maxSessionHistory,
   persistDebounceMs,
+  sessionPersistenceMode,
   getSessionSnapshot,
   persistDeps,
   hydrateSession,
@@ -42,7 +44,9 @@ export function useSessionRecovery({
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const snapshot = getSessionSnapshot();
+      const snapshot = getSessionSnapshot({
+        includeDocumentBytes: sessionPersistenceMode === 'full',
+      });
       persistSession(snapshot);
       persistSessionHistory(snapshot);
       setSessionHistory(loadSessionHistory().slice(0, maxSessionHistory));
@@ -51,16 +55,18 @@ export function useSessionRecovery({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [getSessionSnapshot, maxSessionHistory, persistDebounceMs, ...persistDeps]);
+  }, [getSessionSnapshot, maxSessionHistory, persistDebounceMs, sessionPersistenceMode, ...persistDeps]);
 
   const restorePreviousSession = useCallback(() => {
     if (!restorableSession) {
       return;
     }
 
-    hydrateSession(restorableSession);
-    setRestorableSession(null);
-    addOperationLogFromCurrentState('Restored previous session');
+    const restored = hydrateSession(restorableSession);
+    if (restored) {
+      setRestorableSession(null);
+      addOperationLogFromCurrentState('Restored previous session');
+    }
   }, [addOperationLogFromCurrentState, hydrateSession, restorableSession]);
 
   const dismissPreviousSession = useCallback(() => {
@@ -73,9 +79,11 @@ export function useSessionRecovery({
 
   const restoreHistorySnapshot = useCallback(
     (snapshot: PersistedPdfSession) => {
-      hydrateSession(snapshot);
-      setRestorableSession(null);
-      addOperationLogFromCurrentState(`Restored snapshot ${new Date(snapshot.savedAt).toLocaleTimeString()}`);
+      const restored = hydrateSession(snapshot);
+      if (restored) {
+        setRestorableSession(null);
+        addOperationLogFromCurrentState(`Restored snapshot ${new Date(snapshot.savedAt).toLocaleTimeString()}`);
+      }
     },
     [addOperationLogFromCurrentState, hydrateSession],
   );

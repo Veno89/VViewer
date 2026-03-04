@@ -15,6 +15,14 @@ Scope: Optimization and correctness, feature maturity, attack surface
 - [x] Phase 1, Item 5: Add architecture note for state ownership.
 - [ ] Phase 2 onward: Not started.
 
+## Phase 2 Progress
+
+- [x] Implemented persistence policy mode:
+   - default `metadata-only`
+   - optional explicit `full` mode for byte-level restore
+- [x] Added user-facing privacy setting in `PrivacyPanelDialog` for persistence mode selection.
+- [ ] Next: security headers expansion, tighter SW cache allowlist, CI vulnerability gates.
+
 ## Executive Summary
 
 The app is in a good functional state and has shipped many useful features quickly. The next step is to reduce complexity and risk while improving long-term maintainability. The largest technical risks are:

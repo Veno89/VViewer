@@ -356,10 +356,16 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   },
 
   hydrateSession(session) {
+    const hasAllBytes = session.sourceFiles.every((sourceFile) => typeof sourceFile.bytesBase64 === 'string' && sourceFile.bytesBase64.length > 0);
+    if (!hasAllBytes) {
+      set({ error: 'This snapshot contains metadata only. Enable full session persistence to restore documents.' });
+      return false;
+    }
+
     const sourceFiles: PdfSourceFile[] = session.sourceFiles.map((sourceFile) => ({
       index: sourceFile.index,
       name: sourceFile.name,
-      bytes: base64ToBytes(sourceFile.bytesBase64),
+      bytes: base64ToBytes(sourceFile.bytesBase64 as string),
       pageCount: sourceFile.pageCount,
     }));
 
@@ -375,10 +381,13 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       isLoading: false,
       error: null,
     });
+
+    return true;
   },
 
-  getSessionSnapshot() {
+  getSessionSnapshot(options) {
     const state = get();
+    const includeDocumentBytes = options?.includeDocumentBytes ?? true;
 
     if (state.sourceFiles.length === 0 || state.pages.length === 0) {
       return null;
@@ -388,7 +397,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       sourceFiles: state.sourceFiles.map((sourceFile) => ({
         index: sourceFile.index,
         name: sourceFile.name,
-        bytesBase64: bytesToBase64(sourceFile.bytes),
+        bytesBase64: includeDocumentBytes ? bytesToBase64(sourceFile.bytes) : undefined,
         pageCount: sourceFile.pageCount,
       })),
       pages: state.pages.map((page) => ({ ...page })),

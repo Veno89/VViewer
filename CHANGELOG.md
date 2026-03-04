@@ -56,6 +56,8 @@ All notable changes to this project are documented in this file.
 - Extracted export/print/extract orchestration and export progress/profile state from `src/App.tsx` into `src/hooks/usePdfExport.ts`.
 - Extracted session restore/history persistence orchestration from `src/App.tsx` into `src/hooks/useSessionRecovery.ts`.
 - Updated `README.md` to reflect current shipped capabilities, architecture layout, scripts, and production caching notes.
+- Added session persistence modes (`metadata-only` default, `full` opt-in) and wired recovery/persistence behavior to selected mode.
+- Added privacy panel controls so users can choose local session storage depth (metadata only vs full document bytes).
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -84,6 +86,7 @@ All notable changes to this project are documented in this file.
 - Added in-document search highlights for text-based PDFs (no OCR) and Power Panel match navigation with previous/next controls and active match position.
 - Added a general selectable text layer in preview so users can mark/copy embedded PDF text directly (independent of search).
 - Clarified thumbnail rotation labels by showing `Original` for unrotated pages instead of `0deg`.
+- Prevented metadata-only snapshots from attempting byte-level restoration by surfacing a clear restore constraint message instead of applying partial state.
 - Added unit tests for shared PDF text-layer normalization and text merge behavior.
 - Added critical workflow coverage with store integration tests (`zoom` clamping, reorder/delete/rotate with undo/redo) and search navigation helper tests.
 - Added architecture/state ownership guidance in `ARCHITECTURE_STATE_OWNERSHIP.md`.
