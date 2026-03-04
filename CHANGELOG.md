@@ -70,6 +70,7 @@ All notable changes to this project are documented in this file.
 - Corrected drag-time thumbnail shrink/disappear artifacts by switching sortable item transforms from `CSS.Transform` to `CSS.Translate` when using drag overlays.
 - Fixed drag-and-drop collapse/z-index issues by removing extra wrapper div around sortable items that broke `@dnd-kit` layout measurements, and raising overlay z-index.
 - Switched Power Panel tooltips to native `title` attributes for guaranteed cross-layout visibility.
+- Restored styled `tooltip-bubble` Power Panel tooltips (Toolbar-consistent) using explicit JSX class references so styles are retained in production Tailwind builds.
 - Added delayed rendering indicator (300 ms) to prevent flash during fast fit-mode transitions, and broadened pdf.js error suppression for canvas-conflict messages.
 
 ### UX
