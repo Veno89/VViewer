@@ -331,6 +331,30 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     });
   },
 
+  restorePagesSnapshot(snapshotPages) {
+    set((state) => {
+      if (snapshotPages.length === 0) {
+        return state;
+      }
+
+      const sourceFileIndexes = new Set(state.sourceFiles.map((file) => file.index));
+      const sanitizedPages = snapshotPages.filter((page) => sourceFileIndexes.has(page.sourceFileIndex));
+
+      if (sanitizedPages.length === 0) {
+        return state;
+      }
+
+      return {
+        pages: sanitizedPages.map((page) => ({ ...page })),
+        history: updateHistory(state.history, state.pages),
+        future: [],
+        selectedIds: new Set<string>(),
+        lastSelectedPageId: null,
+        activePageId: getActivePageAfterDelete(sanitizedPages, state.activePageId),
+      };
+    });
+  },
+
   hydrateSession(session) {
     const sourceFiles: PdfSourceFile[] = session.sourceFiles.map((sourceFile) => ({
       index: sourceFile.index,

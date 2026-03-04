@@ -5,6 +5,7 @@ import { OperationHistoryPanel } from '@/components/Layout/OperationHistoryPanel
 import { PagePreview } from '@/components/PagePreview/PagePreview';
 import { ThumbnailPanel } from '@/components/ThumbnailPanel/ThumbnailPanel';
 import { usePdfDocument } from '@/hooks/usePdfDocument';
+import { usePdfTextSearch } from '@/hooks/usePdfTextSearch';
 import { usePdfRenderer } from '@/hooks/usePdfRenderer';
 import type { OperationLogEntry, PageInfo, PdfSourceFile, ZoomMode } from '@/types/pdf';
 
@@ -42,6 +43,16 @@ interface AppShellProps {
   operationLog: OperationLogEntry[];
   onRotateSelected: () => void;
   onClearSelection: () => void;
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
+  onSortOriginal: () => void;
+  onRemoveDuplicates: () => void;
+  onExtractOdd: () => void;
+  onExtractEven: () => void;
+  onOpenExportPreview: () => void;
+  onOpenKeyboardHelp: () => void;
+  onOpenPrivacyPanel: () => void;
+  onRestoreSnapshot: (entryId: string) => void;
 }
 
 export function AppShell({
@@ -78,11 +89,26 @@ export function AppShell({
   operationLog,
   onRotateSelected,
   onClearSelection,
+  searchQuery,
+  onSearchQueryChange,
+  onSortOriginal,
+  onRemoveDuplicates,
+  onExtractOdd,
+  onExtractEven,
+  onOpenExportPreview,
+  onOpenKeyboardHelp,
+  onOpenPrivacyPanel,
+  onRestoreSnapshot,
 }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [visibleThumbnailIds, setVisibleThumbnailIds] = useState<Set<string>>(new Set());
   const { documents, isLoading: isDocumentLoading, error: documentError } = usePdfDocument(sourceFiles);
-  const renderIds = useMemo(() => new Set(pages.map((page) => page.id)), [pages]);
+  const renderIds = useMemo(
+    () => (visibleThumbnailIds.size > 0 ? visibleThumbnailIds : new Set(pages.map((page) => page.id))),
+    [pages, visibleThumbnailIds],
+  );
   const { thumbnails, isRendering } = usePdfRenderer(pages, documents, renderIds);
+  const { matches: searchMatches, isIndexing: isIndexingSearch } = usePdfTextSearch(searchQuery, pages, documents);
 
   const activePage = useMemo(
     () => pages.find((page) => page.id === activePageId) ?? null,
@@ -176,6 +202,7 @@ export function AppShell({
             onSelect={onSelectPage}
             onRotate={onRotatePage}
             onDelete={onDeletePage}
+            onVisibleIdsChange={setVisibleThumbnailIds}
           />
         </aside>
 
@@ -189,7 +216,24 @@ export function AppShell({
           />
         </section>
 
-        <OperationHistoryPanel entries={operationLog} />
+        <OperationHistoryPanel
+          entries={operationLog}
+          searchQuery={searchQuery}
+          onSearchQueryChange={onSearchQueryChange}
+          searchMatches={searchMatches}
+          isIndexingSearch={isIndexingSearch}
+          onOpenSearchMatch={(pageId) => {
+            onSelectPage(pageId, false, false);
+          }}
+          onSortOriginal={onSortOriginal}
+          onRemoveDuplicates={onRemoveDuplicates}
+          onExtractOdd={onExtractOdd}
+          onExtractEven={onExtractEven}
+          onOpenExportPreview={onOpenExportPreview}
+          onOpenKeyboardHelp={onOpenKeyboardHelp}
+          onOpenPrivacyPanel={onOpenPrivacyPanel}
+          onRestoreSnapshot={onRestoreSnapshot}
+        />
       </main>
     </div>
   );

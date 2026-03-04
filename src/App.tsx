@@ -1,42 +1,68 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { ExportPreviewDialog } from '@/components/Dialogs/ExportPreviewDialog';
+import { KeyboardHelpDialog } from '@/components/Dialogs/KeyboardHelpDialog';
 import { OnboardingModal } from '@/components/Dialogs/OnboardingModal';
-import { UndoToast } from '@/components/Dialogs/UndoToast';
 import { PageRangeDialog } from '@/components/Dialogs/PageRangeDialog';
+import { PrivacyPanelDialog } from '@/components/Dialogs/PrivacyPanelDialog';
+import { UndoToast } from '@/components/Dialogs/UndoToast';
 import { DropZone } from '@/components/DropZone/DropZone';
 import { AppShell } from '@/components/Layout/AppShell';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useTheme } from '@/hooks/useTheme';
-import { downloadPdf, exportPdf } from '@/services/pdfExporter';
+import { downloadPdf, exportPdf, type ExportProfile } from '@/services/pdfExporter';
 import { readFileAsUint8Array } from '@/services/pdfLoader';
 import { printPdf } from '@/services/pdfPrinter';
 import { usePdfStore } from '@/stores/pdfStore';
-import type { OperationLogEntry, PersistedPdfSession, ZoomMode } from '@/types/pdf';
+import type { OperationLogEntry, PageInfo, PersistedPdfSession, ZoomMode } from '@/types/pdf';
 import { parsePageRangeInput } from '@/utils/pageRange';
-import { clearPersistedSession, loadPersistedSession, persistSession } from '@/utils/sessionStorage';
+import { dedupePagesBySource, filterEvenPagesByCurrentOrder, filterOddPagesByCurrentOrder, sortPagesByOriginalOrder } from '@/utils/pageTools';
+import {
+  clearPersistedSession,
+  clearPersistedSessionHistory,
+  loadPersistedSession,
+  loadSessionHistory,
+  persistSession,
+  persistSessionHistory,
+} from '@/utils/sessionStorage';
 
 const LARGE_FILE_WARNING_BYTES = 50 * 1024 * 1024;
 const PERSIST_DEBOUNCE_MS = 600;
-const MAX_OPERATION_LOG = 30;
+const MAX_OPERATION_LOG = 40;
+const MAX_SESSION_HISTORY = 5;
 const ONBOARDING_STORAGE_KEY = 'vviewer-onboarding-hidden';
 const LATEST_CHANGELOG_ITEMS = [
-  'Session restore and activity history panel',
-  'Fit-width / fit-page zoom modes with keyboard navigation',
-  'Improved thumbnail drag cues and better rendering stability',
-  'Local-first privacy workflow: no account, no telemetry, no ads',
+  'Search page text directly from the in-editor power panel',
+  'Session restore timeline with jump-to-snapshot support',
+  'Smart tools: sort original, dedupe, and odd/even extraction',
+  'Export preview with profile presets and progress tracking',
 ];
+
+function clonePages(pages: PageInfo[]): PageInfo[] {
+  return pages.map((page) => ({ ...page }));
+}
 
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const undoToastTimerRef = useRef<number | null>(null);
+
   const [isRangeDialogOpen, setIsRangeDialogOpen] = useState(false);
   const [rangeDialogError, setRangeDialogError] = useState<string | null>(null);
   const [isUndoToastVisible, setIsUndoToastVisible] = useState(false);
   const [undoMessage, setUndoMessage] = useState('Action completed');
   const [restorableSession, setRestorableSession] = useState<PersistedPdfSession | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<PersistedPdfSession[]>([]);
   const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([]);
   const [zoomMode, setZoomMode] = useState<ZoomMode>('manual');
   const [effectiveZoom, setEffectiveZoom] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
+  const [isKeyboardHelpOpen, setIsKeyboardHelpOpen] = useState(false);
+  const [isPrivacyPanelOpen, setIsPrivacyPanelOpen] = useState(false);
+  const [exportProfile, setExportProfile] = useState<ExportProfile>('balanced');
+  const [exportProgress, setExportProgress] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
   const { theme, toggleTheme } = useTheme();
 
   const sourceFiles = usePdfStore((state) => state.sourceFiles);
@@ -61,27 +87,40 @@ export default function App() {
   const clearSelection = usePdfStore((state) => state.clearSelection);
   const setZoom = usePdfStore((state) => state.setZoom);
   const clearDocument = usePdfStore((state) => state.clearDocument);
+  const restorePagesSnapshot = usePdfStore((state) => state.restorePagesSnapshot);
   const hydrateSession = usePdfStore((state) => state.hydrateSession);
   const getSessionSnapshot = usePdfStore((state) => state.getSessionSnapshot);
   const undo = usePdfStore((state) => state.undo);
   const redo = usePdfStore((state) => state.redo);
   const setError = usePdfStore((state) => state.setError);
 
-  const addOperationLog = useCallback((label: string): void => {
+  const addOperationLog = useCallback((label: string, snapshotPages?: PageInfo[]): void => {
     const entry: OperationLogEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       label,
       timestamp: new Date().toISOString(),
+      snapshotPages,
     };
 
     setOperationLog((previous) => [entry, ...previous].slice(0, MAX_OPERATION_LOG));
+    setLiveAnnouncement(label);
   }, []);
+
+  const addOperationLogFromCurrentState = useCallback(
+    (label: string): void => {
+      const currentPages = clonePages(usePdfStore.getState().pages);
+      addOperationLog(label, currentPages);
+    },
+    [addOperationLog],
+  );
 
   useEffect(() => {
     const persisted = loadPersistedSession();
     if (persisted) {
       setRestorableSession(persisted);
     }
+
+    setSessionHistory(loadSessionHistory().slice(0, MAX_SESSION_HISTORY));
 
     const hideOnboarding = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
     if (hideOnboarding !== 'true') {
@@ -91,7 +130,10 @@ export default function App() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      persistSession(getSessionSnapshot());
+      const snapshot = getSessionSnapshot();
+      persistSession(snapshot);
+      persistSessionHistory(snapshot);
+      setSessionHistory(loadSessionHistory().slice(0, MAX_SESSION_HISTORY));
     }, PERSIST_DEBOUNCE_MS);
 
     return () => {
@@ -119,14 +161,14 @@ export default function App() {
         try {
           const bytes = await readFileAsUint8Array(file);
           await loadPdf(bytes, file.name);
-          addOperationLog(`Loaded PDF: ${file.name}`);
+          addOperationLogFromCurrentState(`Loaded PDF: ${file.name}`);
         } catch (fileError) {
           const message = fileError instanceof Error ? fileError.message : 'Unknown error';
           setError(`Failed to load ${file.name}: ${message}`);
         }
       }
     },
-    [addOperationLog, loadPdf, setError],
+    [addOperationLogFromCurrentState, loadPdf, setError],
   );
 
   const handleHiddenInputChange = useCallback(
@@ -141,22 +183,44 @@ export default function App() {
     [loadFiles],
   );
 
+  const runExport = useCallback(
+    async (targetPages: PageInfo[], fileName: string, profile: ExportProfile): Promise<void> => {
+      if (targetPages.length === 0) {
+        return;
+      }
+
+      try {
+        setIsExporting(true);
+        setExportProgress(0);
+        const bytes = await exportPdf(sourceFiles, targetPages, {
+          profile,
+          onProgress: (completed, total) => {
+            const percent = Math.round((completed / Math.max(total, 1)) * 100);
+            setExportProgress(percent);
+          },
+        });
+        downloadPdf(bytes, fileName);
+        setError(null);
+      } catch (downloadError) {
+        const message = downloadError instanceof Error ? downloadError.message : 'Failed to export PDF.';
+        setError(message);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [setError, sourceFiles],
+  );
+
   const handleDownload = useCallback(async (): Promise<void> => {
     if (pages.length === 0) {
       return;
     }
 
-    try {
-      const bytes = await exportPdf(sourceFiles, pages);
-      const exportName = `vviewer-edited-${new Date().toISOString().slice(0, 10)}.pdf`;
-      downloadPdf(bytes, exportName);
-      addOperationLog('Exported edited PDF');
-      setError(null);
-    } catch (downloadError) {
-      const message = downloadError instanceof Error ? downloadError.message : 'Failed to export PDF.';
-      setError(message);
-    }
-  }, [addOperationLog, pages, setError, sourceFiles]);
+    const exportName = `vviewer-edited-${new Date().toISOString().slice(0, 10)}.pdf`;
+    await runExport(pages, exportName, exportProfile);
+    addOperationLogFromCurrentState(`Exported PDF (${exportProfile})`);
+    setIsExportPreviewOpen(false);
+  }, [addOperationLogFromCurrentState, exportProfile, pages, runExport]);
 
   const showUndoToast = useCallback((message: string): void => {
     setUndoMessage(message);
@@ -176,9 +240,9 @@ export default function App() {
     (id: string): void => {
       deletePage(id);
       showUndoToast('Page deleted');
-      addOperationLog('Deleted one page');
+      addOperationLogFromCurrentState('Deleted one page');
     },
-    [addOperationLog, deletePage, showUndoToast],
+    [addOperationLogFromCurrentState, deletePage, showUndoToast],
   );
 
   const handleDeleteSelected = useCallback((): void => {
@@ -188,31 +252,45 @@ export default function App() {
 
     deleteSelected();
     showUndoToast('Selected pages deleted');
-    addOperationLog('Deleted selected pages');
-  }, [addOperationLog, deleteSelected, selectedIds.size, showUndoToast]);
+    addOperationLogFromCurrentState('Deleted selected pages');
+  }, [addOperationLogFromCurrentState, deleteSelected, selectedIds.size, showUndoToast]);
 
   const handleReorderPages = useCallback(
     (activeId: string, overId: string): void => {
       reorderPages(activeId, overId);
-      addOperationLog('Reordered pages');
+      addOperationLogFromCurrentState('Reordered pages');
     },
-    [addOperationLog, reorderPages],
+    [addOperationLogFromCurrentState, reorderPages],
   );
 
   const handleRotateAll = useCallback((): void => {
     rotateAll();
-    addOperationLog('Rotated all pages');
-  }, [addOperationLog, rotateAll]);
+    addOperationLogFromCurrentState('Rotated all pages');
+  }, [addOperationLogFromCurrentState, rotateAll]);
 
   const handleUndo = useCallback((): void => {
     undo();
-    addOperationLog('Undo');
-  }, [addOperationLog, undo]);
+    addOperationLogFromCurrentState('Undo');
+  }, [addOperationLogFromCurrentState, undo]);
 
   const handleRedo = useCallback((): void => {
     redo();
-    addOperationLog('Redo');
-  }, [addOperationLog, redo]);
+    addOperationLogFromCurrentState('Redo');
+  }, [addOperationLogFromCurrentState, redo]);
+
+  const handleExtractPages = useCallback(
+    async (targetPages: PageInfo[], fileName: string, label: string): Promise<void> => {
+      if (targetPages.length === 0) {
+        setError('No pages matched that extract preset.');
+        return;
+      }
+
+      await runExport(targetPages, fileName, 'balanced');
+      addOperationLogFromCurrentState(label);
+      setError(null);
+    },
+    [addOperationLogFromCurrentState, runExport, setError],
+  );
 
   const handleExtractSelected = useCallback(async (): Promise<void> => {
     const selectedPages = pages.filter((page) => selectedIds.has(page.id));
@@ -221,16 +299,16 @@ export default function App() {
       return;
     }
 
-    try {
-      const bytes = await exportPdf(sourceFiles, selectedPages);
-      downloadPdf(bytes, 'vviewer-extract.pdf');
-      addOperationLog(`Extracted ${selectedPages.length} page(s)`);
-      setError(null);
-    } catch (extractError) {
-      const message = extractError instanceof Error ? extractError.message : 'Failed to extract selected pages.';
-      setError(message);
-    }
-  }, [addOperationLog, pages, selectedIds, setError, sourceFiles]);
+    await handleExtractPages(selectedPages, 'vviewer-extract.pdf', `Extracted ${selectedPages.length} page(s)`);
+  }, [handleExtractPages, pages, selectedIds, setError]);
+
+  const handleExtractOdd = useCallback(async (): Promise<void> => {
+    await handleExtractPages(filterOddPagesByCurrentOrder(pages), 'vviewer-odd-pages.pdf', 'Extracted odd pages');
+  }, [handleExtractPages, pages]);
+
+  const handleExtractEven = useCallback(async (): Promise<void> => {
+    await handleExtractPages(filterEvenPagesByCurrentOrder(pages), 'vviewer-even-pages.pdf', 'Extracted even pages');
+  }, [handleExtractPages, pages]);
 
   const handlePrint = useCallback(async (): Promise<void> => {
     if (pages.length === 0) {
@@ -238,15 +316,40 @@ export default function App() {
     }
 
     try {
-      const bytes = await exportPdf(sourceFiles, pages);
+      const bytes = await exportPdf(sourceFiles, pages, { profile: 'print' });
       printPdf(bytes);
-      addOperationLog('Sent document to print');
+      addOperationLogFromCurrentState('Sent document to print');
       setError(null);
     } catch (printError) {
       const message = printError instanceof Error ? printError.message : 'Failed to print PDF.';
       setError(message);
     }
-  }, [addOperationLog, pages, setError, sourceFiles]);
+  }, [addOperationLogFromCurrentState, pages, setError, sourceFiles]);
+
+  const handleSortOriginal = useCallback((): void => {
+    const sorted = sortPagesByOriginalOrder(pages);
+    restorePagesSnapshot(sorted);
+    addOperationLogFromCurrentState('Sorted pages by original order');
+  }, [addOperationLogFromCurrentState, pages, restorePagesSnapshot]);
+
+  const handleRemoveDuplicates = useCallback((): void => {
+    const deduped = dedupePagesBySource(pages);
+    restorePagesSnapshot(deduped);
+    addOperationLogFromCurrentState('Removed duplicate pages');
+  }, [addOperationLogFromCurrentState, pages, restorePagesSnapshot]);
+
+  const handleRestoreOperationSnapshot = useCallback(
+    (entryId: string): void => {
+      const target = operationLog.find((entry) => entry.id === entryId);
+      if (!target?.snapshotPages || target.snapshotPages.length === 0) {
+        return;
+      }
+
+      restorePagesSnapshot(target.snapshotPages);
+      addOperationLogFromCurrentState(`Restored timeline: ${target.label}`);
+    },
+    [addOperationLogFromCurrentState, operationLog, restorePagesSnapshot],
+  );
 
   useKeyboardShortcuts({
     onDeleteSelected: handleDeleteSelected,
@@ -254,7 +357,7 @@ export default function App() {
     onUndo: handleUndo,
     onRedo: handleRedo,
     onDownload: () => {
-      void handleDownload();
+      setIsExportPreviewOpen(true);
     },
     onNextPage: () => {
       if (pages.length === 0) {
@@ -319,7 +422,7 @@ export default function App() {
         }
 
         setSelectedPageIds(ids);
-        addOperationLog(`Selected ${ids.length} page(s) via range`);
+        addOperationLogFromCurrentState(`Selected ${ids.length} page(s) via range`);
         setRangeDialogError(null);
         setIsRangeDialogOpen(false);
       } catch (rangeError) {
@@ -327,7 +430,7 @@ export default function App() {
         setRangeDialogError(message);
       }
     },
-    [addOperationLog, pages, setSelectedPageIds],
+    [addOperationLogFromCurrentState, pages, setSelectedPageIds],
   );
 
   return (
@@ -343,6 +446,10 @@ export default function App() {
         }}
       />
 
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {liveAnnouncement}
+      </div>
+
       {error && (
         <div className="fixed left-1/2 top-3 z-50 -translate-x-1/2 rounded bg-red-600 px-3 py-2 text-sm text-white shadow-lg">
           {error}
@@ -354,16 +461,14 @@ export default function App() {
           <div className="mx-auto mb-4 max-w-6xl">
             {restorableSession && (
               <div className="mb-3 rounded border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
-                <p>
-                  Restore previous session from {new Date(restorableSession.savedAt).toLocaleString()}?
-                </p>
+                <p>Restore previous session from {new Date(restorableSession.savedAt).toLocaleString()}?</p>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       hydrateSession(restorableSession);
                       setRestorableSession(null);
-                      addOperationLog('Restored previous session');
+                      addOperationLogFromCurrentState('Restored previous session');
                     }}
                     className="rounded bg-blue-600 px-2.5 py-1 text-white hover:bg-blue-700"
                   >
@@ -373,8 +478,10 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       clearPersistedSession();
+                      clearPersistedSessionHistory();
                       clearDocument();
                       setRestorableSession(null);
+                      setSessionHistory([]);
                     }}
                     className="rounded border border-blue-300 px-2.5 py-1 hover:bg-blue-100 dark:border-blue-700 dark:hover:bg-blue-900/50"
                   >
@@ -383,6 +490,29 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            {sessionHistory.length > 0 && (
+              <div className="mb-3 rounded border border-slate-200 bg-white p-3 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                <p className="font-semibold">Recent snapshots</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {sessionHistory.map((snapshot) => (
+                    <button
+                      key={snapshot.savedAt}
+                      type="button"
+                      onClick={() => {
+                        hydrateSession(snapshot);
+                        setRestorableSession(null);
+                        addOperationLogFromCurrentState(`Restored snapshot ${new Date(snapshot.savedAt).toLocaleTimeString()}`);
+                      }}
+                      className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                    >
+                      {new Date(snapshot.savedAt).toLocaleTimeString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mb-4 flex justify-end">
               <button
                 type="button"
@@ -433,7 +563,7 @@ export default function App() {
             setIsRangeDialogOpen(true);
           }}
           onDownload={() => {
-            void handleDownload();
+            setIsExportPreviewOpen(true);
           }}
           onPrint={() => {
             void handlePrint();
@@ -466,11 +596,31 @@ export default function App() {
             }
 
             selectedIds.forEach((id) => rotatePage(id));
-            addOperationLog(`Rotated ${selectedIds.size} selected page(s)`);
+            addOperationLogFromCurrentState(`Rotated ${selectedIds.size} selected page(s)`);
           }}
           onClearSelection={() => {
             clearSelection();
           }}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onSortOriginal={handleSortOriginal}
+          onRemoveDuplicates={handleRemoveDuplicates}
+          onExtractOdd={() => {
+            void handleExtractOdd();
+          }}
+          onExtractEven={() => {
+            void handleExtractEven();
+          }}
+          onOpenExportPreview={() => {
+            setIsExportPreviewOpen(true);
+          }}
+          onOpenKeyboardHelp={() => {
+            setIsKeyboardHelpOpen(true);
+          }}
+          onOpenPrivacyPanel={() => {
+            setIsPrivacyPanelOpen(true);
+          }}
+          onRestoreSnapshot={handleRestoreOperationSnapshot}
         />
       )}
 
@@ -502,6 +652,38 @@ export default function App() {
         onDisableFuture={() => {
           window.localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
           setIsOnboardingOpen(false);
+        }}
+      />
+
+      <ExportPreviewDialog
+        isOpen={isExportPreviewOpen}
+        totalPages={pages.length}
+        selectedPages={selectedIds.size}
+        profile={exportProfile}
+        progress={exportProgress}
+        isExporting={isExporting}
+        onProfileChange={setExportProfile}
+        onClose={() => {
+          if (!isExporting) {
+            setIsExportPreviewOpen(false);
+          }
+        }}
+        onConfirm={() => {
+          void handleDownload();
+        }}
+      />
+
+      <KeyboardHelpDialog
+        isOpen={isKeyboardHelpOpen}
+        onClose={() => {
+          setIsKeyboardHelpOpen(false);
+        }}
+      />
+
+      <PrivacyPanelDialog
+        isOpen={isPrivacyPanelOpen}
+        onClose={() => {
+          setIsPrivacyPanelOpen(false);
         }}
       />
     </>

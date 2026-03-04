@@ -29,8 +29,14 @@ All notable changes to this project are documented in this file.
   - First-load onboarding modal with optional "don't show again" preference.
   - Expanded contextual guidance with richer toolbar and zoom control tooltips.
   - Enhanced splash/empty state with product trust messaging and recent updates highlights.
+  - In-editor Power Panel with text search, smart tools, and restore shortcuts.
+  - Session snapshot history with quick restore points on the splash screen.
+  - Keyboard shortcuts help dialog and privacy details panel.
+  - Export preview modal with profile selection and progress feedback.
+  - Odd/even extract presets and source-order sorting/deduplication tools.
 - Quality tooling:
   - Vitest setup and page-range parser tests.
+  - Additional utility tests for page tool operations (sort/dedupe/odd-even).
   - GitHub Actions CI workflow for install, build, and test.
   - VS Code workspace settings/extensions recommendations.
 
@@ -38,8 +44,11 @@ All notable changes to this project are documented in this file.
 - App orchestration in `src/App.tsx` expanded to centralize import validation, action logging, session persistence, and shell wiring.
 - Store contracts in `src/types/pdf.ts` and `src/stores/pdfStore.ts` extended for persistence snapshots and operation tracking.
 - Layout composition in `src/components/Layout/AppShell.tsx` updated to include bulk action bar and operation history panel.
+- Layout composition in `src/components/Layout/AppShell.tsx` expanded with thumbnail windowing and a richer Power Panel experience.
 - Zoom controls and preview rendering updated to support effective zoom reporting and fit modes.
 - Visual design system refreshed with futuristic styling, atmospheric backgrounds, and updated typography.
+- Export pipeline now supports lightweight profiles and cooperative yielding to reduce UI jank on large exports.
+- Added baseline offline install support via web manifest and service worker registration.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -49,6 +58,7 @@ All notable changes to this project are documented in this file.
 - Fixed thumbnail cache invalidation so preview thumbnails reflect page rotation changes.
 - Corrected PDF blob typing/creation edge cases in exporter/printer paths.
 - Resolved resize-time pdf.js canvas race by canceling in-flight render tasks before re-rendering.
+- Improved large-document thumbnail performance via viewport-based rendering window.
 
 ### Notes
 - Current build and test status is green (`npm run build`, `npm run test`).

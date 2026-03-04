@@ -1,0 +1,9 @@
+{
+  "name": "VViewer",
+  "short_name": "VViewer",
+  "description": "Client-side PDF page editor with no account, no telemetry, and no ads.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0891b2"
+}

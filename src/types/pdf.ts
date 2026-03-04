@@ -36,6 +36,7 @@ export interface OperationLogEntry {
   id: string;
   label: string;
   timestamp: string;
+  snapshotPages?: PageInfo[];
 }
 
 export interface PdfStateData {
@@ -65,6 +66,7 @@ export interface PdfStateActions {
   setActivePage: (id: string) => void;
   setZoom: (zoom: number) => void;
   clearDocument: () => void;
+  restorePagesSnapshot: (pages: PageInfo[]) => void;
   hydrateSession: (session: PersistedPdfSession) => void;
   getSessionSnapshot: () => PersistedPdfSession | null;
   undo: () => void;
