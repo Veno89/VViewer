@@ -1,4 +1,6 @@
 import {
+  DragOverlay,
+  type DragCancelEvent,
   type DragOverEvent,
   type DragStartEvent,
   DndContext,
@@ -51,6 +53,10 @@ export function ThumbnailPanel({
 
   const ids = useMemo(() => pages.map((page) => page.id), [pages]);
   const isVirtualized = dragState.activeId === null;
+  const activeDragPage = useMemo(
+    () => pages.find((page) => page.id === dragState.activeId) ?? null,
+    [dragState.activeId, pages],
+  );
 
   const windowRange = useMemo(() => {
     if (!isVirtualized) {
@@ -100,7 +106,15 @@ export function ThumbnailPanel({
   }, []);
 
   const handleDragStart = (event: DragStartEvent): void => {
-    setDragState({ activeId: String(event.active.id), overId: null });
+    const activeId = String(event.active.id);
+    setDragState({ activeId, overId: null });
+
+    // Render all thumbnail IDs while dragging to avoid blank slots.
+    onVisibleIdsChange?.(new Set(ids));
+  };
+
+  const handleDragCancel = (_event: DragCancelEvent): void => {
+    setDragState({ activeId: null, overId: null });
   };
 
   const handleDragOver = (event: DragOverEvent): void => {
@@ -130,6 +144,7 @@ export function ThumbnailPanel({
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
+        onDragCancel={handleDragCancel}
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
@@ -138,8 +153,12 @@ export function ThumbnailPanel({
               <div
                 key={page.id}
                 style={{
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: '240px',
+                  ...(isVirtualized
+                    ? {
+                        contentVisibility: 'auto',
+                        containIntrinsicSize: '240px',
+                      }
+                    : {}),
                 }}
               >
                 <SortableItem
@@ -166,6 +185,31 @@ export function ThumbnailPanel({
             {isVirtualized && <div style={{ height: Math.max(0, (pages.length - windowRange.end - 1) * ITEM_HEIGHT) }} />}
           </div>
         </SortableContext>
+
+        <DragOverlay dropAnimation={null}>
+          {activeDragPage ? (
+            <div className="w-full max-w-[220px] opacity-90">
+              <ThumbnailCard
+                page={activeDragPage}
+                thumbnailUrl={thumbnails[activeDragPage.id]}
+                isActive={false}
+                isSelected={false}
+                onClick={() => {
+                  // Drag overlay is visual-only.
+                }}
+                onActivate={() => {
+                  // Drag overlay is visual-only.
+                }}
+                onRotate={() => {
+                  // Drag overlay is visual-only.
+                }}
+                onDelete={() => {
+                  // Drag overlay is visual-only.
+                }}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );

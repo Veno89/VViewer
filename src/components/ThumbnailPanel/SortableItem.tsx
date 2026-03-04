@@ -19,7 +19,7 @@ export function SortableItem({ id, children, isDropTarget = false }: SortableIte
     <div
       ref={setNodeRef}
       style={style}
-      className={`${isDragging ? 'opacity-70 shadow-2xl ring-2 ring-blue-500' : ''} ${isDropTarget ? 'relative before:absolute before:-top-1 before:left-0 before:right-0 before:h-0.5 before:bg-blue-500' : ''}`}
+      className={`${isDragging ? 'opacity-35' : ''} ${isDropTarget ? 'relative before:absolute before:-top-1 before:left-0 before:right-0 before:h-0.5 before:bg-blue-500' : ''}`}
       {...attributes}
       {...listeners}
     >

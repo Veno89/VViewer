@@ -59,6 +59,11 @@ All notable changes to this project are documented in this file.
 - Corrected PDF blob typing/creation edge cases in exporter/printer paths.
 - Resolved resize-time pdf.js canvas race by canceling in-flight render tasks before re-rendering.
 - Improved large-document thumbnail performance via viewport-based rendering window.
+- Stabilized drag-and-drop thumbnail behavior by introducing a drag overlay ghost preview and safer drag-state reset handling.
+- Prevented thumbnail preview disappearance during drag by disabling virtualization paint optimizations while actively dragging.
+
+### UX
+- Added more informative tooltips and helper text for Power Panel search and smart tool actions.
 
 ### Notes
 - Current build and test status is green (`npm run build`, `npm run test`).

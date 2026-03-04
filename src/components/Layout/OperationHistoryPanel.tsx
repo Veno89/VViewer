@@ -41,12 +41,14 @@ export function OperationHistoryPanel({
       <div className="max-h-full space-y-3 overflow-y-auto p-3">
         <section className="rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Search Pages</p>
+          <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">Find text across loaded PDFs (embedded text content).</p>
           <input
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             className="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-900"
             placeholder="Search text..."
             aria-label="Search page text"
+            title="Search across all pages. Type at least 2 characters to start indexing."
           />
           {isIndexingSearch && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Indexing pages...</p>}
           {!isIndexingSearch && searchQuery.trim().length >= 2 && (
@@ -72,15 +74,17 @@ export function OperationHistoryPanel({
 
         <section className="rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Smart Tools</p>
+          <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">One-click document cleanup and extraction presets.</p>
           <div className="mt-2 grid grid-cols-2 gap-1">
-            <button type="button" onClick={onSortOriginal} className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Sort Original</button>
-            <button type="button" onClick={onRemoveDuplicates} className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Dedupe</button>
-            <button type="button" onClick={onExtractOdd} className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Odd</button>
-            <button type="button" onClick={onExtractEven} className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Even</button>
+            <button type="button" onClick={onSortOriginal} title="Restore page sequence by source file and original page index." className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Sort Original</button>
+            <button type="button" onClick={onRemoveDuplicates} title="Remove duplicate source-page entries while keeping first occurrence." className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Dedupe</button>
+            <button type="button" onClick={onExtractOdd} title="Export a new PDF with pages 1, 3, 5... based on current order." className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Odd</button>
+            <button type="button" onClick={onExtractEven} title="Export a new PDF with pages 2, 4, 6... based on current order." className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Even</button>
           </div>
           <button
             type="button"
             onClick={onOpenExportPreview}
+            title="Open export summary, choose profile, and download with progress feedback."
             className="mt-2 w-full rounded bg-cyan-600 px-2 py-1.5 text-[11px] font-medium text-white hover:bg-cyan-700"
           >
             Export Preview
