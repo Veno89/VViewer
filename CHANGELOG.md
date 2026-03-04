@@ -61,6 +61,8 @@ All notable changes to this project are documented in this file.
 - Expanded deployment security headers in `public/_headers` with CSP, frame protections, MIME-sniffing protection, permissions policy, and cross-origin isolation-related directives.
 - Tightened service worker caching to an explicit app-shell/static asset allowlist instead of broad same-origin GET caching.
 - Added CI vulnerability gating for high/critical production dependency advisories via `npm audit --audit-level=high --omit=dev`.
+- Added search result navigation keyboard shortcuts (`F3` next, `Shift+F3` previous) and surfaced them in the keyboard shortcuts dialog.
+- Added live-region announcements for active search match changes to improve screen-reader context during navigation.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.

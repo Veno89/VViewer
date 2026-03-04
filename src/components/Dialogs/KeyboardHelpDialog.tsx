@@ -9,6 +9,8 @@ const SHORTCUTS = [
   { key: 'Ctrl+Z', action: 'Undo' },
   { key: 'Ctrl+Shift+Z', action: 'Redo' },
   { key: 'Ctrl+S', action: 'Download PDF' },
+  { key: 'F3', action: 'Next search match' },
+  { key: 'Shift+F3', action: 'Previous search match' },
   { key: 'Arrow Up/Down', action: 'Move active page selection' },
   { key: 'Shift+Arrow Up/Down', action: 'Extend range selection' },
 ];

@@ -26,6 +26,12 @@ Scope: Optimization and correctness, feature maturity, attack surface
 - [x] Added CI dependency vulnerability gate for high/critical production advisories (`npm audit --audit-level=high --omit=dev`).
 - [ ] Next: Phase 3 feature maturity and UX reliability work.
 
+## Phase 3 Progress
+
+- [x] Added keyboard shortcuts for search navigation (`F3` next, `Shift+F3` previous) and exposed them in keyboard help.
+- [x] Added live-region announcements for active search match changes.
+- [ ] Next: large-document mode thresholds and adaptive degradation strategy.
+
 ## Executive Summary
 
 The app is in a good functional state and has shipped many useful features quickly. The next step is to reduce complexity and risk while improving long-term maintainability. The largest technical risks are:

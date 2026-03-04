@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Header } from '@/components/Layout/Header';
 import { OperationHistoryPanel } from '@/components/Layout/OperationHistoryPanel';
@@ -105,6 +105,7 @@ export function AppShell({
 }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeSearchMatchIndex, setActiveSearchMatchIndex] = useState(0);
+  const [searchAnnouncement, setSearchAnnouncement] = useState('');
   const { documents, isLoading: isDocumentLoading, error: documentError } = usePdfDocument(sourceFiles);
   const renderIds = useMemo(() => new Set(pages.map((page) => page.id)), [pages]);
   const { thumbnails, isRendering } = usePdfRenderer(pages, documents, renderIds);
@@ -121,7 +122,7 @@ export function AppShell({
     setActiveSearchMatchIndex((previous) => resolveActiveSearchMatchIndex(searchMatches, activePageId, previous));
   }, [activePageId, searchMatches]);
 
-  const openSearchMatchAt = (index: number) => {
+  const openSearchMatchAt = useCallback((index: number) => {
     if (searchMatches.length === 0) {
       return;
     }
@@ -134,10 +135,57 @@ export function AppShell({
 
     setActiveSearchMatchIndex(normalizedIndex);
     onSelectPage(target.pageId, false, false);
-  };
+  }, [onSelectPage, searchMatches]);
+
+  useEffect(() => {
+    if (searchMatches.length === 0) {
+      setSearchAnnouncement('');
+      return;
+    }
+
+    const current = searchMatches[activeSearchMatchIndex];
+    if (!current) {
+      return;
+    }
+
+    setSearchAnnouncement(`Search match ${activeSearchMatchIndex + 1} of ${searchMatches.length}, page ${current.pageNumber}`);
+  }, [activeSearchMatchIndex, searchMatches]);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (searchMatches.length === 0 || searchQuery.trim().length < 2) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase() ?? '';
+      const isEditable = target?.isContentEditable || tagName === 'textarea';
+
+      if (isEditable) {
+        return;
+      }
+
+      if (event.key === 'F3') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          openSearchMatchAt(activeSearchMatchIndex - 1);
+        } else {
+          openSearchMatchAt(activeSearchMatchIndex + 1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => {
+      window.removeEventListener('keydown', handler);
+    };
+  }, [activeSearchMatchIndex, openSearchMatchAt, searchMatches.length, searchQuery]);
 
   return (
     <div className="flex h-screen flex-col bg-transparent">
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {searchAnnouncement}
+      </div>
       <Header
         zoom={displayZoom}
         zoomMode={zoomMode}
