@@ -34,14 +34,15 @@ export function OperationHistoryPanel({
   onRestoreSnapshot,
 }: OperationHistoryPanelProps) {
   const tooltipClasses =
-    'tooltip-bubble pointer-events-none absolute left-1/2 bottom-full z-30 mb-1 w-56 -translate-x-1/2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100';
+    'tooltip-bubble pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-52 -translate-x-1/2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100';
 
   return (
-    <aside className="hidden w-80 border-l border-gray-200 bg-white lg:block dark:border-gray-700 dark:bg-gray-900">
+    <aside className="hidden w-80 flex-col border-l border-gray-200 bg-white lg:flex dark:border-gray-700 dark:bg-gray-900">
       <div className="border-b border-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
         Power Panel
       </div>
-      <div className="max-h-full space-y-3 overflow-y-auto p-3">
+      {/* Non-scrolling area — tooltips are not clipped */}
+      <div className="space-y-3 p-3">
         <section className="rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Search Pages</p>
           <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">Find text across loaded PDFs (embedded text content).</p>
@@ -127,6 +128,9 @@ export function OperationHistoryPanel({
           </div>
         </section>
 
+      </div>
+      {/* Scrollable area — only the activity timeline scrolls */}
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 pt-0">
         <section>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Activity</div>
         {entries.length === 0 ? (

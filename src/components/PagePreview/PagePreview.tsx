@@ -1,11 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PageInfo, ZoomMode } from '@/types/pdf';
-
-interface PdfRenderTask {
-  promise: Promise<unknown>;
-  cancel: () => void;
-}
 
 interface PagePreviewProps {
   activePage: PageInfo | null;
@@ -18,14 +13,21 @@ interface PagePreviewProps {
 export function PagePreview({ activePage, documents, zoom, zoomMode, onEffectiveZoomChange }: PagePreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const activeRenderTaskRef = useRef<PdfRenderTask | null>(null);
-  const renderQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const renderTaskRef = useRef<{ promise: Promise<unknown>; cancel: () => void } | null>(null);
   const renderRunRef = useRef(0);
   const lastReportedZoomRef = useRef<number | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
   const manualZoomDependency = zoomMode === 'manual' ? zoom : 1;
+
+  const cancelCurrentRender = useCallback(async () => {
+    const task = renderTaskRef.current;
+    if (!task) return;
+    task.cancel();
+    try { await task.promise; } catch { /* cancelled */ }
+    renderTaskRef.current = null;
+  }, []);
 
   const activeDocument = useMemo(() => {
     if (!activePage) {
@@ -61,58 +63,36 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
   }, []);
 
   useEffect(() => {
-    let unmounted = false;
-    const renderRun = renderRunRef.current + 1;
-    renderRunRef.current = renderRun;
-    const manualZoom = manualZoomDependency;
+    const renderRun = ++renderRunRef.current;
+    const stale = () => renderRunRef.current !== renderRun;
 
-    const renderActivePage = async (): Promise<void> => {
-      if (!canvasRef.current || !activePage || !activeDocument) {
-        activeRenderTaskRef.current?.cancel();
-        activeRenderTaskRef.current = null;
-        return;
-      }
+    if (!canvasRef.current || !activePage || !activeDocument) {
+      void cancelCurrentRender();
+      return;
+    }
 
-      if (renderRunRef.current !== renderRun || unmounted) {
-        return;
-      }
-
-      const previousTask = activeRenderTaskRef.current;
-      previousTask?.cancel();
-      if (previousTask) {
-        try {
-          await previousTask.promise;
-        } catch {
-          // Expected when cancellation interrupts an in-flight render task.
-        }
-      }
-      activeRenderTaskRef.current = null;
-
-      if (renderRunRef.current !== renderRun || unmounted) {
-        return;
-      }
+    const run = async () => {
+      // Always cancel / await the previous render before touching the canvas.
+      await cancelCurrentRender();
+      if (stale()) return;
 
       setIsRendering(true);
       setError(null);
 
       try {
-        let scale = manualZoom;
+        let scale = manualZoomDependency;
 
         if (zoomMode !== 'manual') {
-          const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
-          if (renderRunRef.current !== renderRun || unmounted) {
-            return;
-          }
+          const sizePage = await activeDocument.getPage(activePage.sourcePageIndex + 1);
+          if (stale()) return;
 
-          const baseViewport = page.getViewport({ scale: 1, rotation: activePage.rotation });
-          const containerWidth = Math.max(containerSize.width - 48, 200);
-          const containerHeight = Math.max(containerSize.height - 48, 200);
+          const baseViewport = sizePage.getViewport({ scale: 1, rotation: activePage.rotation });
+          const cw = Math.max(containerSize.width - 48, 200);
+          const ch = Math.max(containerSize.height - 48, 200);
 
-          if (zoomMode === 'fit-width') {
-            scale = containerWidth / baseViewport.width;
-          } else {
-            scale = Math.min(containerWidth / baseViewport.width, containerHeight / baseViewport.height);
-          }
+          scale = zoomMode === 'fit-width'
+            ? cw / baseViewport.width
+            : Math.min(cw / baseViewport.width, ch / baseViewport.height);
         }
 
         const clampedScale = Math.round(Math.max(0.5, Math.min(2, scale)) * 1000) / 1000;
@@ -122,60 +102,41 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         }
 
         const page = await activeDocument.getPage(activePage.sourcePageIndex + 1);
-        if (renderRunRef.current !== renderRun || unmounted || !canvasRef.current) {
-          return;
-        }
+        if (stale() || !canvasRef.current) return;
 
         const viewport = page.getViewport({ scale: clampedScale, rotation: activePage.rotation });
-        const context = canvasRef.current.getContext('2d');
+        const canvas = canvasRef.current;
 
-        if (!context) {
-          throw new Error('Canvas 2D context is not available.');
-        }
+        // Resetting width/height clears the canvas and any internal pdf.js state tied to it.
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas 2D context is not available.');
 
-        canvasRef.current.width = Math.ceil(viewport.width);
-        canvasRef.current.height = Math.ceil(viewport.height);
-        context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        const task = page.render({ canvasContext: ctx, viewport });
+        renderTaskRef.current = task as unknown as { promise: Promise<unknown>; cancel: () => void };
 
-        const renderTask = page.render({ canvasContext: context, viewport });
-        activeRenderTaskRef.current = renderTask as unknown as PdfRenderTask;
-
-        await renderTask.promise;
-
-        if (renderRunRef.current !== renderRun) {
-          return;
-        }
-
-        activeRenderTaskRef.current = null;
-      } catch (renderError) {
-        const maybeError = renderError as { name?: string; message?: string };
-        if (maybeError?.name === 'RenderingCancelledException') {
-          return;
-        }
-
-        if (!unmounted && renderRunRef.current === renderRun) {
-          const message = renderError instanceof Error ? renderError.message : 'Failed to render page.';
-          setError(message);
-        }
+        await task.promise;
+        renderTaskRef.current = null;
+      } catch (err: unknown) {
+        // Silently ignore ANY error from a superseded / cancelled render.
+        if (stale()) return;
+        const msg = (err as { name?: string })?.name;
+        if (msg === 'RenderingCancelledException' || msg === 'RenderingCancelled') return;
+        setError(err instanceof Error ? err.message : 'Failed to render page.');
       } finally {
-        if (!unmounted && renderRunRef.current === renderRun) {
-          setIsRendering(false);
-        }
+        if (!stale()) setIsRendering(false);
       }
     };
 
-    renderQueueRef.current = renderQueueRef.current
-      .then(renderActivePage)
-      .catch(() => {
-        // Keep render queue alive even if one task fails.
-      });
+    void run();
 
     return () => {
-      unmounted = true;
-      activeRenderTaskRef.current?.cancel();
-      activeRenderTaskRef.current = null;
+      // Increment run counter so the in-flight render bails via stale().
+      renderRunRef.current++;
+      renderTaskRef.current?.cancel();
     };
-  }, [activeDocument, activePage, containerSize.height, containerSize.width, manualZoomDependency, onEffectiveZoomChange, zoomMode]);
+  }, [activeDocument, activePage, cancelCurrentRender, containerSize.height, containerSize.width, manualZoomDependency, onEffectiveZoomChange, zoomMode]);
 
   if (!activePage) {
     return (
