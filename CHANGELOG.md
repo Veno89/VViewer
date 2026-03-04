@@ -74,6 +74,7 @@ All notable changes to this project are documented in this file.
 - Added delayed rendering indicator (300 ms) to prevent flash during fast fit-mode transitions, and broadened pdf.js error suppression for canvas-conflict messages.
 - Fixed stale production deploy behavior by updating service worker strategy (network-first for navigation, immediate activation, client claim) and adding no-cache headers for `sw.js`/`index.html` on Netlify.
 - Fixed `+/-` zoom controls by wiring `PagePreview` to the store zoom state (manual zoom source of truth) while keeping header zoom readout based on effective fit/manual zoom.
+- Fixed Power Panel horizontal clipping by making it match its grid column width, and adjusted Smart Tools tooltip anchoring to prevent edge overflow near the browser window.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.

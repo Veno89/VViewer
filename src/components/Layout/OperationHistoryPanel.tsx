@@ -34,7 +34,7 @@ export function OperationHistoryPanel({
   onRestoreSnapshot,
 }: OperationHistoryPanelProps) {
   return (
-    <aside className="hidden w-80 flex-col border-l border-gray-200 bg-white lg:flex dark:border-gray-700 dark:bg-gray-900">
+    <aside className="hidden min-w-0 w-full flex-col border-l border-gray-200 bg-white lg:flex dark:border-gray-700 dark:bg-gray-900">
       <div className="border-b border-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
         Power Panel
       </div>
@@ -79,25 +79,25 @@ export function OperationHistoryPanel({
           <div className="mt-2 grid grid-cols-2 gap-1">
             <div className="group relative">
               <button type="button" onClick={onSortOriginal} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Sort Original</button>
-              <div className="tooltip-bubble pointer-events-none absolute left-1/2 top-full z-50 mt-1 w-48 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
+              <div className="tooltip-bubble pointer-events-none absolute left-0 top-full z-50 mt-1 w-48 opacity-0 transition group-hover:opacity-100">
                 <p className="text-slate-600 dark:text-slate-300">Restore page sequence by source file and original page index</p>
               </div>
             </div>
             <div className="group relative">
               <button type="button" onClick={onRemoveDuplicates} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Dedupe</button>
-              <div className="tooltip-bubble pointer-events-none absolute left-1/2 top-full z-50 mt-1 w-48 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
+              <div className="tooltip-bubble pointer-events-none absolute right-0 top-full z-50 mt-1 w-48 opacity-0 transition group-hover:opacity-100">
                 <p className="text-slate-600 dark:text-slate-300">Remove duplicate source-page entries, keeping the first occurrence</p>
               </div>
             </div>
             <div className="group relative">
               <button type="button" onClick={onExtractOdd} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Odd</button>
-              <div className="tooltip-bubble pointer-events-none absolute left-1/2 top-full z-50 mt-1 w-48 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
+              <div className="tooltip-bubble pointer-events-none absolute left-0 top-full z-50 mt-1 w-48 opacity-0 transition group-hover:opacity-100">
                 <p className="text-slate-600 dark:text-slate-300">Keep only odd-numbered pages (1, 3, 5…) based on current order</p>
               </div>
             </div>
             <div className="group relative">
               <button type="button" onClick={onExtractEven} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Even</button>
-              <div className="tooltip-bubble pointer-events-none absolute left-1/2 top-full z-50 mt-1 w-48 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
+              <div className="tooltip-bubble pointer-events-none absolute right-0 top-full z-50 mt-1 w-48 opacity-0 transition group-hover:opacity-100">
                 <p className="text-slate-600 dark:text-slate-300">Keep only even-numbered pages (2, 4, 6…) based on current order</p>
               </div>
             </div>
