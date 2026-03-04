@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import type { SearchHighlightRect } from '@/hooks/usePdfTextSearch';
 import type { PageInfo, ZoomMode } from '@/types/pdf';
 
 interface PagePreviewProps {
@@ -7,10 +8,11 @@ interface PagePreviewProps {
   documents: Map<number, PDFDocumentProxy>;
   zoom: number;
   zoomMode: ZoomMode;
+  searchHighlights?: SearchHighlightRect[];
   onEffectiveZoomChange?: (zoom: number) => void;
 }
 
-export function PagePreview({ activePage, documents, zoom, zoomMode, onEffectiveZoomChange }: PagePreviewProps) {
+export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighlights = [], onEffectiveZoomChange }: PagePreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const renderTaskRef = useRef<{ promise: Promise<unknown>; cancel: () => void } | null>(null);
@@ -164,7 +166,25 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
           {error}
         </div>
       )}
-      <canvas ref={canvasRef} className="rounded-md bg-white shadow-lg" />
+      <div className="relative inline-block">
+        <canvas ref={canvasRef} className="rounded-md bg-white shadow-lg" />
+        {searchHighlights.length > 0 && (
+          <div className="pointer-events-none absolute inset-0">
+            {searchHighlights.map((rect, index) => (
+              <span
+                key={`${rect.left}-${rect.top}-${index}`}
+                className="absolute rounded-sm border border-amber-300 bg-amber-300/35 dark:border-amber-200 dark:bg-amber-200/30"
+                style={{
+                  left: `${Math.max(0, Math.min(1, rect.left)) * 100}%`,
+                  top: `${Math.max(0, Math.min(1, rect.top)) * 100}%`,
+                  width: `${Math.max(0, Math.min(1, rect.width)) * 100}%`,
+                  height: `${Math.max(0, Math.min(1, rect.height)) * 100}%`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

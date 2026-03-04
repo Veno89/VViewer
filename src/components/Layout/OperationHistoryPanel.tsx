@@ -4,9 +4,12 @@ interface OperationHistoryPanelProps {
   entries: OperationLogEntry[];
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
-  searchMatches: Array<{ pageId: string; pageNumber: number; snippet: string }>;
+  searchMatches: Array<{ pageId: string; pageNumber: number; snippet: string; matchCount: number }>;
   isIndexingSearch: boolean;
   onOpenSearchMatch: (pageId: string) => void;
+  activeSearchMatchIndex: number;
+  onNextSearchMatch: () => void;
+  onPreviousSearchMatch: () => void;
   onSortOriginal: () => void;
   onRemoveDuplicates: () => void;
   onExtractOdd: () => void;
@@ -24,6 +27,9 @@ export function OperationHistoryPanel({
   searchMatches,
   isIndexingSearch,
   onOpenSearchMatch,
+  activeSearchMatchIndex,
+  onNextSearchMatch,
+  onPreviousSearchMatch,
   onSortOriginal,
   onRemoveDuplicates,
   onExtractOdd,
@@ -53,7 +59,28 @@ export function OperationHistoryPanel({
           </div>
           {isIndexingSearch && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Indexing pages...</p>}
           {!isIndexingSearch && searchQuery.trim().length >= 2 && (
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{searchMatches.length} match(es)</p>
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{searchMatches.length} page(s) with matches</p>
+          )}
+          {searchMatches.length > 0 && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-2 py-1 dark:border-gray-700 dark:bg-gray-900">
+              <span className="text-[11px] text-gray-600 dark:text-gray-300">Match {activeSearchMatchIndex + 1} / {searchMatches.length}</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={onPreviousSearchMatch}
+                  className="rounded border border-gray-300 px-1.5 py-0.5 text-[10px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={onNextSearchMatch}
+                  className="rounded border border-gray-300 px-1.5 py-0.5 text-[10px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
           {searchMatches.length > 0 && (
             <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto">
@@ -64,7 +91,7 @@ export function OperationHistoryPanel({
                     onClick={() => onOpenSearchMatch(match.pageId)}
                     className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-left text-[11px] hover:bg-cyan-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-cyan-900/30"
                   >
-                    <div className="font-medium text-gray-800 dark:text-gray-100">Page {match.pageNumber}</div>
+                    <div className="font-medium text-gray-800 dark:text-gray-100">Page {match.pageNumber} ({Math.max(match.matchCount, 1)})</div>
                     <div className="truncate text-gray-500 dark:text-gray-400">{match.snippet}</div>
                   </button>
                 </li>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Header } from '@/components/Layout/Header';
 import { OperationHistoryPanel } from '@/components/Layout/OperationHistoryPanel';
@@ -103,15 +103,50 @@ export function AppShell({
   onRestoreSnapshot,
 }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSearchMatchIndex, setActiveSearchMatchIndex] = useState(0);
   const { documents, isLoading: isDocumentLoading, error: documentError } = usePdfDocument(sourceFiles);
   const renderIds = useMemo(() => new Set(pages.map((page) => page.id)), [pages]);
   const { thumbnails, isRendering } = usePdfRenderer(pages, documents, renderIds);
-  const { matches: searchMatches, isIndexing: isIndexingSearch } = usePdfTextSearch(searchQuery, pages, documents);
+  const { matches: searchMatches, isIndexing: isIndexingSearch, highlightsByPage } = usePdfTextSearch(searchQuery, pages, documents);
 
   const activePage = useMemo(
     () => pages.find((page) => page.id === activePageId) ?? null,
     [activePageId, pages],
   );
+
+  const activeSearchHighlights = activePage ? highlightsByPage[activePage.id] ?? [] : [];
+
+  useEffect(() => {
+    if (searchMatches.length === 0) {
+      setActiveSearchMatchIndex(0);
+      return;
+    }
+
+    if (activePageId) {
+      const selectedIndex = searchMatches.findIndex((match) => match.pageId === activePageId);
+      if (selectedIndex >= 0) {
+        setActiveSearchMatchIndex(selectedIndex);
+        return;
+      }
+    }
+
+    setActiveSearchMatchIndex((previous) => Math.min(previous, searchMatches.length - 1));
+  }, [activePageId, searchMatches]);
+
+  const openSearchMatchAt = (index: number) => {
+    if (searchMatches.length === 0) {
+      return;
+    }
+
+    const normalizedIndex = ((index % searchMatches.length) + searchMatches.length) % searchMatches.length;
+    const target = searchMatches[normalizedIndex];
+    if (!target) {
+      return;
+    }
+
+    setActiveSearchMatchIndex(normalizedIndex);
+    onSelectPage(target.pageId, false, false);
+  };
 
   return (
     <div className="flex h-screen flex-col bg-transparent">
@@ -209,6 +244,7 @@ export function AppShell({
             documents={documents}
             zoom={zoom}
             zoomMode={zoomMode}
+            searchHighlights={activeSearchHighlights}
             onEffectiveZoomChange={onEffectiveZoomChange}
           />
         </section>
@@ -221,6 +257,17 @@ export function AppShell({
           isIndexingSearch={isIndexingSearch}
           onOpenSearchMatch={(pageId) => {
             onSelectPage(pageId, false, false);
+            const selectedIndex = searchMatches.findIndex((match) => match.pageId === pageId);
+            if (selectedIndex >= 0) {
+              setActiveSearchMatchIndex(selectedIndex);
+            }
+          }}
+          activeSearchMatchIndex={activeSearchMatchIndex}
+          onNextSearchMatch={() => {
+            openSearchMatchAt(activeSearchMatchIndex + 1);
+          }}
+          onPreviousSearchMatch={() => {
+            openSearchMatchAt(activeSearchMatchIndex - 1);
           }}
           onSortOriginal={onSortOriginal}
           onRemoveDuplicates={onRemoveDuplicates}
