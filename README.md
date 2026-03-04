@@ -39,6 +39,14 @@ npm run dev
 npm run build
 ```
 
+## Important: Run With Vite
+
+Do not open `index.html` directly with Live Server for development.
+
+- `src/main.tsx` is TypeScript/TSX and must be transformed by Vite.
+- Opening through Live Server can trigger MIME errors such as `application/octet-stream` for module files.
+- Use the Vite URL shown in terminal, typically `http://localhost:5173/`.
+
 ## Architecture
 
 ```
