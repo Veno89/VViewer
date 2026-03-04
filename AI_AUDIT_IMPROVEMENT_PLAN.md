@@ -30,7 +30,12 @@ Scope: Optimization and correctness, feature maturity, attack surface
 
 - [x] Added keyboard shortcuts for search navigation (`F3` next, `Shift+F3` previous) and exposed them in keyboard help.
 - [x] Added live-region announcements for active search match changes.
-- [ ] Next: large-document mode thresholds and adaptive degradation strategy.
+- [x] Implemented large-document mode thresholds with adaptive degradation:
+   - focused thumbnail rendering window around active/selected pages
+   - capped search page indexing scope under load
+   - reduced search highlight extraction in degraded mode
+   - surfaced in-app performance mode status messaging
+- [ ] Next: accessibility consistency pass (focus trap and tab-order verification) + reliability test matrix for heavy workflows.
 
 ## Executive Summary
 

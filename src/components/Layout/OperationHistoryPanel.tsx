@@ -6,6 +6,7 @@ interface OperationHistoryPanelProps {
   onSearchQueryChange: (value: string) => void;
   searchMatches: Array<{ pageId: string; pageNumber: number; snippet: string; matchCount: number }>;
   isIndexingSearch: boolean;
+  searchStatusNote?: string;
   onOpenSearchMatch: (pageId: string) => void;
   activeSearchMatchIndex: number;
   onNextSearchMatch: () => void;
@@ -26,6 +27,7 @@ export function OperationHistoryPanel({
   onSearchQueryChange,
   searchMatches,
   isIndexingSearch,
+  searchStatusNote,
   onOpenSearchMatch,
   activeSearchMatchIndex,
   onNextSearchMatch,
@@ -57,6 +59,11 @@ export function OperationHistoryPanel({
               aria-label="Search page text"
             />
           </div>
+          {searchStatusNote && (
+            <p className="mt-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:border-amber-800/80 dark:bg-amber-950/50 dark:text-amber-200">
+              {searchStatusNote}
+            </p>
+          )}
           {isIndexingSearch && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Indexing pages...</p>}
           {!isIndexingSearch && searchQuery.trim().length >= 2 && (
             <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{searchMatches.length} page(s) with matches</p>

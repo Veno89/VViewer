@@ -8,6 +8,7 @@ import { usePdfDocument } from '@/hooks/usePdfDocument';
 import { usePdfTextSearch } from '@/hooks/usePdfTextSearch';
 import { usePdfRenderer } from '@/hooks/usePdfRenderer';
 import type { OperationLogEntry, PageInfo, PdfSourceFile, ZoomMode } from '@/types/pdf';
+import { createPerformanceModeState, createThumbnailRenderIds } from '@/utils/performanceMode';
 import { normalizeSearchMatchIndex, resolveActiveSearchMatchIndex } from '@/utils/searchNavigation';
 
 interface AppShellProps {
@@ -107,9 +108,23 @@ export function AppShell({
   const [activeSearchMatchIndex, setActiveSearchMatchIndex] = useState(0);
   const [searchAnnouncement, setSearchAnnouncement] = useState('');
   const { documents, isLoading: isDocumentLoading, error: documentError } = usePdfDocument(sourceFiles);
-  const renderIds = useMemo(() => new Set(pages.map((page) => page.id)), [pages]);
+  const performanceMode = useMemo(() => createPerformanceModeState(pages.length), [pages.length]);
+  const activePageIndex = useMemo(() => pages.findIndex((page) => page.id === activePageId), [activePageId, pages]);
+  const renderIds = useMemo(
+    () => createThumbnailRenderIds(pages.map((page) => page.id), activePageIndex, selectedIds, performanceMode.thumbnailRadius),
+    [activePageIndex, pages, performanceMode.thumbnailRadius, selectedIds],
+  );
   const { thumbnails, isRendering } = usePdfRenderer(pages, documents, renderIds);
-  const { matches: searchMatches, isIndexing: isIndexingSearch, highlightsByPage } = usePdfTextSearch(searchQuery, pages, documents);
+  const {
+    matches: searchMatches,
+    isIndexing: isIndexingSearch,
+    highlightsByPage,
+    isScanLimited,
+    scannedPages,
+  } = usePdfTextSearch(searchQuery, pages, documents, {
+    maxPagesToScan: performanceMode.searchPageScanLimit,
+    includeHighlights: !performanceMode.isLargeDocumentMode,
+  });
 
   const activePage = useMemo(
     () => pages.find((page) => page.id === activePageId) ?? null,
@@ -117,6 +132,21 @@ export function AppShell({
   );
 
   const activeSearchHighlights = activePage ? highlightsByPage[activePage.id] ?? [] : [];
+  const searchStatusNote = useMemo(() => {
+    if (!performanceMode.isLargeDocumentMode) {
+      return '';
+    }
+
+    if (searchQuery.trim().length < 2) {
+      return `Large document mode active (${performanceMode.pageCount} pages): thumbnail rendering is focused around the active page for responsiveness.`;
+    }
+
+    if (isScanLimited) {
+      return `Large document mode: search scanned ${scannedPages} of ${performanceMode.pageCount} pages and preview highlights are reduced.`;
+    }
+
+    return `Large document mode active (${performanceMode.pageCount} pages): preview highlights are reduced to keep navigation responsive.`;
+  }, [isScanLimited, performanceMode.isLargeDocumentMode, performanceMode.pageCount, scannedPages, searchQuery]);
 
   useEffect(() => {
     setActiveSearchMatchIndex((previous) => resolveActiveSearchMatchIndex(searchMatches, activePageId, previous));
@@ -254,6 +284,12 @@ export function AppShell({
         </div>
       )}
 
+      {performanceMode.isLargeDocumentMode && (
+        <div className="border-b border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-100">
+          Performance mode is enabled for large documents. Thumbnail rendering and search highlighting are reduced to keep interaction smooth.
+        </div>
+      )}
+
       <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_1fr_288px]">
         <aside className={`min-h-0 border-r border-cyan-200/60 bg-white/65 backdrop-blur dark:border-cyan-900/45 dark:bg-slate-950/65 ${isSidebarOpen ? 'block' : 'hidden'} lg:block`}>
           {(isDocumentLoading || isRendering) && (
@@ -291,6 +327,7 @@ export function AppShell({
           onSearchQueryChange={onSearchQueryChange}
           searchMatches={searchMatches}
           isIndexingSearch={isIndexingSearch}
+          searchStatusNote={searchStatusNote}
           onOpenSearchMatch={(pageId) => {
             onSelectPage(pageId, false, false);
             const selectedIndex = searchMatches.findIndex((match) => match.pageId === pageId);

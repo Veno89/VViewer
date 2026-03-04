@@ -21,6 +21,14 @@ interface UsePdfTextSearchResult {
   matches: SearchMatch[];
   isIndexing: boolean;
   highlightsByPage: Record<string, SearchHighlightRect[]>;
+  isScanLimited: boolean;
+  scannedPages: number;
+}
+
+interface UsePdfTextSearchOptions {
+  enabled?: boolean;
+  maxPagesToScan?: number;
+  includeHighlights?: boolean;
 }
 
 interface CachedPageText {
@@ -45,10 +53,14 @@ export function usePdfTextSearch(
   query: string,
   pages: PageInfo[],
   documents: Map<number, PDFDocumentProxy>,
+  options: UsePdfTextSearchOptions = {},
 ): UsePdfTextSearchResult {
+  const { enabled = true, maxPagesToScan = Number.MAX_SAFE_INTEGER, includeHighlights = true } = options;
   const [matches, setMatches] = useState<SearchMatch[]>([]);
   const [isIndexing, setIsIndexing] = useState(false);
   const [highlightsByPage, setHighlightsByPage] = useState<Record<string, SearchHighlightRect[]>>({});
+  const [isScanLimited, setIsScanLimited] = useState(false);
+  const [scannedPages, setScannedPages] = useState(0);
   const textCacheRef = useRef<Map<string, CachedPageText>>(new Map());
 
   const normalizedQuery = useMemo(() => query.trim().toLowerCase(), [query]);
@@ -57,9 +69,11 @@ export function usePdfTextSearch(
     let cancelled = false;
 
     const indexAndSearch = async (): Promise<void> => {
-      if (normalizedQuery.length < 2 || pages.length === 0 || documents.size === 0) {
+      if (!enabled || normalizedQuery.length < 2 || pages.length === 0 || documents.size === 0) {
         setMatches([]);
         setHighlightsByPage({});
+        setIsScanLimited(false);
+        setScannedPages(0);
         setIsIndexing(false);
         return;
       }
@@ -67,8 +81,11 @@ export function usePdfTextSearch(
       setIsIndexing(true);
       const nextMatches: SearchMatch[] = [];
       const nextHighlightsByPage: Record<string, SearchHighlightRect[]> = {};
+      const scanPageCount = Math.min(pages.length, Math.max(1, maxPagesToScan));
+      setIsScanLimited(scanPageCount < pages.length);
+      setScannedPages(scanPageCount);
 
-      for (let i = 0; i < pages.length; i += 1) {
+      for (let i = 0; i < scanPageCount; i += 1) {
         if (cancelled) {
           return;
         }
@@ -104,10 +121,12 @@ export function usePdfTextSearch(
           }
         }
 
-        const pageHighlights = pageText.items.filter((item) => item.text.toLowerCase().includes(normalizedQuery));
+        const pageHighlights = includeHighlights
+          ? pageText.items.filter((item) => item.text.toLowerCase().includes(normalizedQuery))
+          : [];
 
         if (pageHighlights.length > 0 || pageText.mergedText.toLowerCase().includes(normalizedQuery)) {
-          if (pageHighlights.length > 0) {
+          if (includeHighlights && pageHighlights.length > 0) {
             nextHighlightsByPage[page.id] = pageHighlights.map((item) => ({
               left: item.left,
               top: item.top,
@@ -137,7 +156,7 @@ export function usePdfTextSearch(
     return () => {
       cancelled = true;
     };
-  }, [documents, normalizedQuery, pages]);
+  }, [documents, enabled, includeHighlights, maxPagesToScan, normalizedQuery, pages]);
 
-  return { matches, isIndexing, highlightsByPage };
+  return { matches, isIndexing, highlightsByPage, isScanLimited, scannedPages };
 }

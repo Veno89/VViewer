@@ -63,6 +63,7 @@ All notable changes to this project are documented in this file.
 - Added CI vulnerability gating for high/critical production dependency advisories via `npm audit --audit-level=high --omit=dev`.
 - Added search result navigation keyboard shortcuts (`F3` next, `Shift+F3` previous) and surfaced them in the keyboard shortcuts dialog.
 - Added live-region announcements for active search match changes to improve screen-reader context during navigation.
+- Added large-document performance mode with adaptive degradation (thumbnail render windowing, limited search scan scope, reduced highlight extraction, and explicit user status notices).
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
