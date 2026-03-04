@@ -53,6 +53,7 @@ All notable changes to this project are documented in this file.
 - Unified PDF text geometry normalization into a shared utility consumed by both search indexing and preview text-layer rendering to reduce duplication and drift risk.
 - Extracted operation timeline/log state and log helpers from `src/App.tsx` into `src/hooks/useOperationLog.ts` to reduce top-level orchestration coupling.
 - Extracted PDF import/load file handling from `src/App.tsx` into `src/hooks/usePdfImport.ts` to improve separation of concerns and keep top-level orchestration smaller.
+- Extracted export/print/extract orchestration and export progress/profile state from `src/App.tsx` into `src/hooks/usePdfExport.ts`.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.

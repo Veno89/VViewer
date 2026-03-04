@@ -9,7 +9,8 @@ Scope: Optimization and correctness, feature maturity, attack surface
 - [ ] Phase 1, Item 2: Extract feature-specific hooks from `src/App.tsx`.
    - [x] Extracted operation log responsibility into `src/hooks/useOperationLog.ts` and integrated in `App.tsx`.
    - [x] Extracted import/load workflow into `src/hooks/usePdfImport.ts` and integrated in `App.tsx`.
-   - [ ] Remaining extractions: export/print, session persistence/recovery.
+   - [x] Extracted export/print and extraction workflow into `src/hooks/usePdfExport.ts` and integrated in `App.tsx`.
+   - [ ] Remaining extractions: session persistence/recovery.
 - [ ] Phase 1, Item 4: Add integration tests for critical workflows.
 - [ ] Phase 1, Item 5: Add architecture note for state ownership.
 - [ ] Phase 2 onward: Not started.
