@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PageInfo } from '@/types/pdf';
 import { mergeNormalizedText, normalizeTextItems, type NormalizedTextRect } from '@/utils/pdfTextLayer';
+import { resolveSearchScanPageCount } from '@/utils/searchReliability';
 
 export interface SearchMatch {
   pageId: string;
@@ -81,7 +82,7 @@ export function usePdfTextSearch(
       setIsIndexing(true);
       const nextMatches: SearchMatch[] = [];
       const nextHighlightsByPage: Record<string, SearchHighlightRect[]> = {};
-      const scanPageCount = Math.min(pages.length, Math.max(1, maxPagesToScan));
+      const scanPageCount = resolveSearchScanPageCount(pages.length, maxPagesToScan);
       setIsScanLimited(scanPageCount < pages.length);
       setScannedPages(scanPageCount);
 

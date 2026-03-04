@@ -65,6 +65,7 @@ All notable changes to this project are documented in this file.
 - Added live-region announcements for active search match changes to improve screen-reader context during navigation.
 - Added large-document performance mode with adaptive degradation (thumbnail render windowing, limited search scan scope, reduced highlight extraction, and explicit user status notices).
 - Added a heavy-workflow reliability matrix document (`TEST_MATRIX_HEAVY_WORKFLOWS.md`) and utility tests for large-document threshold/windowing behavior.
+- Added search reliability helpers/tests for scan-limit normalization and large-document status-note behavior to keep degraded-mode search behavior deterministic.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.

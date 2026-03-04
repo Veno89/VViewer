@@ -9,6 +9,7 @@ import { usePdfTextSearch } from '@/hooks/usePdfTextSearch';
 import { usePdfRenderer } from '@/hooks/usePdfRenderer';
 import type { OperationLogEntry, PageInfo, PdfSourceFile, ZoomMode } from '@/types/pdf';
 import { createPerformanceModeState, createThumbnailRenderIds } from '@/utils/performanceMode';
+import { buildSearchStatusNote } from '@/utils/searchReliability';
 import { normalizeSearchMatchIndex, resolveActiveSearchMatchIndex } from '@/utils/searchNavigation';
 
 interface AppShellProps {
@@ -133,19 +134,13 @@ export function AppShell({
 
   const activeSearchHighlights = activePage ? highlightsByPage[activePage.id] ?? [] : [];
   const searchStatusNote = useMemo(() => {
-    if (!performanceMode.isLargeDocumentMode) {
-      return '';
-    }
-
-    if (searchQuery.trim().length < 2) {
-      return `Large document mode active (${performanceMode.pageCount} pages): thumbnail rendering is focused around the active page for responsiveness.`;
-    }
-
-    if (isScanLimited) {
-      return `Large document mode: search scanned ${scannedPages} of ${performanceMode.pageCount} pages and preview highlights are reduced.`;
-    }
-
-    return `Large document mode active (${performanceMode.pageCount} pages): preview highlights are reduced to keep navigation responsive.`;
+    return buildSearchStatusNote({
+      isLargeDocumentMode: performanceMode.isLargeDocumentMode,
+      pageCount: performanceMode.pageCount,
+      query: searchQuery,
+      isScanLimited,
+      scannedPages,
+    });
   }, [isScanLimited, performanceMode.isLargeDocumentMode, performanceMode.pageCount, scannedPages, searchQuery]);
 
   useEffect(() => {
