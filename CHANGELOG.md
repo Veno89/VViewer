@@ -50,6 +50,7 @@ All notable changes to this project are documented in this file.
 - Export pipeline now supports lightweight profiles and cooperative yielding to reduce UI jank on large exports.
 - Added baseline offline install support via web manifest and service worker registration.
 - Thumbnail panel rendering strategy simplified during drag interactions to prioritize stability over aggressive virtualization.
+- Unified PDF text geometry normalization into a shared utility consumed by both search indexing and preview text-layer rendering to reduce duplication and drift risk.
 
 ### Fixed
 - Resolved MIME/module loading confusion by standardizing local run path to Vite dev server workflow.
@@ -78,6 +79,7 @@ All notable changes to this project are documented in this file.
 - Added in-document search highlights for text-based PDFs (no OCR) and Power Panel match navigation with previous/next controls and active match position.
 - Added a general selectable text layer in preview so users can mark/copy embedded PDF text directly (independent of search).
 - Clarified thumbnail rotation labels by showing `Original` for unrotated pages instead of `0deg`.
+- Added unit tests for shared PDF text-layer normalization and text merge behavior.
 
 ### UX
 - Added hover tooltip bubbles (matching existing UI tooltip style) for Power Panel search and smart tool actions.

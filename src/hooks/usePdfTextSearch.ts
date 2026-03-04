@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PageInfo } from '@/types/pdf';
+import { mergeNormalizedText, normalizeTextItems, type NormalizedTextRect } from '@/utils/pdfTextLayer';
 
 export interface SearchMatch {
   pageId: string;
@@ -22,17 +23,9 @@ interface UsePdfTextSearchResult {
   highlightsByPage: Record<string, SearchHighlightRect[]>;
 }
 
-interface SearchableTextItem {
-  text: string;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
 interface CachedPageText {
   mergedText: string;
-  items: SearchableTextItem[];
+  items: NormalizedTextRect[];
 }
 
 function toSnippet(text: string, query: string): string {
@@ -94,42 +87,8 @@ export function usePdfTextSearch(
             const pdfPage = await document.getPage(page.sourcePageIndex + 1);
             const viewport = pdfPage.getViewport({ scale: 1, rotation: page.rotation });
             const textContent = await pdfPage.getTextContent();
-            const searchableItems: SearchableTextItem[] = textContent.items
-              .map((item) => {
-                if (!('str' in item) || typeof item.str !== 'string' || !('transform' in item)) {
-                  return null;
-                }
-
-                const transform = Array.isArray(item.transform) ? item.transform : null;
-                if (!transform || transform.length < 6 || !('width' in item)) {
-                  return null;
-                }
-
-                const rawHeight = Math.max(Math.abs(transform[3]), 8);
-                const rawWidth = typeof item.width === 'number' ? Math.max(item.width, 1) : 1;
-                const rawLeft = transform[4];
-                const rawTop = viewport.height - transform[5] - rawHeight;
-
-                const clampedLeft = Math.max(0, Math.min(viewport.width, rawLeft));
-                const clampedTop = Math.max(0, Math.min(viewport.height, rawTop));
-                const clampedWidth = Math.max(0, Math.min(viewport.width - clampedLeft, rawWidth));
-                const clampedHeight = Math.max(0, Math.min(viewport.height - clampedTop, rawHeight));
-
-                return {
-                  text: item.str,
-                  left: clampedLeft / viewport.width,
-                  top: clampedTop / viewport.height,
-                  width: clampedWidth / viewport.width,
-                  height: clampedHeight / viewport.height,
-                };
-              })
-              .filter((item): item is SearchableTextItem => Boolean(item));
-
-            const mergedText = searchableItems
-              .map((item) => item.text)
-              .join(' ')
-              .replace(/\s+/g, ' ')
-              .trim();
+            const searchableItems = normalizeTextItems(textContent.items, viewport.width, viewport.height);
+            const mergedText = mergeNormalizedText(searchableItems);
 
             pageText = {
               mergedText,

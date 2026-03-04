@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { SearchHighlightRect } from '@/hooks/usePdfTextSearch';
 import type { PageInfo, ZoomMode } from '@/types/pdf';
+import { normalizeTextItems, type NormalizedTextRect } from '@/utils/pdfTextLayer';
 
 interface PagePreviewProps {
   activePage: PageInfo | null;
@@ -10,14 +11,6 @@ interface PagePreviewProps {
   zoomMode: ZoomMode;
   searchHighlights?: SearchHighlightRect[];
   onEffectiveZoomChange?: (zoom: number) => void;
-}
-
-interface TextLayerItem {
-  text: string;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
 }
 
 export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighlights = [], onEffectiveZoomChange }: PagePreviewProps) {
@@ -31,7 +24,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
   const [showRenderingHint, setShowRenderingHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
-  const [textLayerItems, setTextLayerItems] = useState<TextLayerItem[]>([]);
+  const [textLayerItems, setTextLayerItems] = useState<NormalizedTextRect[]>([]);
   const [canvasPixels, setCanvasPixels] = useState({ width: 0, height: 0 });
   const manualZoomDependency = zoomMode === 'manual' ? zoom : 1;
 
@@ -143,41 +136,7 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, searchHighl
 
         const textContent = await page.getTextContent();
         if (stale()) return;
-
-        const nextTextLayerItems = textContent.items
-          .map((item) => {
-            if (!('str' in item) || typeof item.str !== 'string' || !('transform' in item)) {
-              return null;
-            }
-
-            const transform = Array.isArray(item.transform) ? item.transform : null;
-            if (!transform || transform.length < 6 || !('width' in item)) {
-              return null;
-            }
-
-            const rawHeight = Math.max(Math.abs(transform[3]), 8);
-            const rawWidth = typeof item.width === 'number' ? Math.max(item.width, 1) : 1;
-            const rawLeft = transform[4];
-            const rawTop = textLayerViewport.height - transform[5] - rawHeight;
-
-            const clampedLeft = Math.max(0, Math.min(textLayerViewport.width, rawLeft));
-            const clampedTop = Math.max(0, Math.min(textLayerViewport.height, rawTop));
-            const clampedWidth = Math.max(0, Math.min(textLayerViewport.width - clampedLeft, rawWidth));
-            const clampedHeight = Math.max(0, Math.min(textLayerViewport.height - clampedTop, rawHeight));
-
-            if (item.str.trim().length === 0 || clampedWidth <= 0 || clampedHeight <= 0) {
-              return null;
-            }
-
-            return {
-              text: item.str,
-              left: clampedLeft / textLayerViewport.width,
-              top: clampedTop / textLayerViewport.height,
-              width: clampedWidth / textLayerViewport.width,
-              height: clampedHeight / textLayerViewport.height,
-            };
-          })
-          .filter((item): item is TextLayerItem => Boolean(item));
+        const nextTextLayerItems = normalizeTextItems(textContent.items, textLayerViewport.width, textLayerViewport.height);
 
         setTextLayerItems(nextTextLayerItems);
       } catch (err: unknown) {
