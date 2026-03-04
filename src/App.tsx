@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExportPreviewDialog } from '@/components/Dialogs/ExportPreviewDialog';
 import { KeyboardHelpDialog } from '@/components/Dialogs/KeyboardHelpDialog';
 import { OnboardingModal } from '@/components/Dialogs/OnboardingModal';
@@ -9,9 +9,9 @@ import { DropZone } from '@/components/DropZone/DropZone';
 import { AppShell } from '@/components/Layout/AppShell';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useOperationLog } from '@/hooks/useOperationLog';
+import { usePdfImport } from '@/hooks/usePdfImport';
 import { useTheme } from '@/hooks/useTheme';
 import { downloadPdf, exportPdf, type ExportProfile } from '@/services/pdfExporter';
-import { readFileAsUint8Array } from '@/services/pdfLoader';
 import { printPdf } from '@/services/pdfPrinter';
 import { usePdfStore } from '@/stores/pdfStore';
 import type { PageInfo, PersistedPdfSession, ZoomMode } from '@/types/pdf';
@@ -38,7 +38,6 @@ const LATEST_CHANGELOG_ITEMS = [
 ];
 
 export default function App() {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const undoToastTimerRef = useRef<number | null>(null);
 
   const [isRangeDialogOpen, setIsRangeDialogOpen] = useState(false);
@@ -116,47 +115,14 @@ export default function App() {
     };
   }, [getSessionSnapshot, pages, sourceFiles, selectedIds, activePageId, zoom]);
 
-  const openFileDialog = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const loadFiles = useCallback(
-    async (files: File[]): Promise<void> => {
-      for (const file of files) {
-        const isPdfType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-        if (!isPdfType) {
-          setError(`Skipped ${file.name}: only PDF files are supported.`);
-          continue;
-        }
-
-        if (file.size > LARGE_FILE_WARNING_BYTES) {
-          setError(`Warning: ${file.name} is larger than 50 MB and may render slowly.`);
-        }
-
-        try {
-          const bytes = await readFileAsUint8Array(file);
-          await loadPdf(bytes, file.name);
-          addOperationLogFromCurrentState(`Loaded PDF: ${file.name}`);
-        } catch (fileError) {
-          const message = fileError instanceof Error ? fileError.message : 'Unknown error';
-          setError(`Failed to load ${file.name}: ${message}`);
-        }
-      }
+  const { fileInputRef, openFileDialog, loadFiles, handleHiddenInputChange } = usePdfImport({
+    loadPdf,
+    setError,
+    onPdfLoaded: (fileName) => {
+      addOperationLogFromCurrentState(`Loaded PDF: ${fileName}`);
     },
-    [addOperationLogFromCurrentState, loadPdf, setError],
-  );
-
-  const handleHiddenInputChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-      const files = Array.from(event.target.files ?? []).filter((file) => file.type === 'application/pdf');
-      if (files.length > 0) {
-        await loadFiles(files);
-      }
-
-      event.target.value = '';
-    },
-    [loadFiles],
-  );
+    maxFileWarningBytes: LARGE_FILE_WARNING_BYTES,
+  });
 
   const runExport = useCallback(
     async (targetPages: PageInfo[], fileName: string, profile: ExportProfile): Promise<void> => {
