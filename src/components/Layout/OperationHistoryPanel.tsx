@@ -33,31 +33,24 @@ export function OperationHistoryPanel({
   onOpenPrivacyPanel,
   onRestoreSnapshot,
 }: OperationHistoryPanelProps) {
-  const tooltipClasses =
-    'tooltip-bubble pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-52 -translate-x-1/2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100';
-
   return (
     <aside className="hidden w-80 flex-col border-l border-gray-200 bg-white lg:flex dark:border-gray-700 dark:bg-gray-900">
       <div className="border-b border-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
         Power Panel
       </div>
-      {/* Non-scrolling area — tooltips are not clipped */}
       <div className="space-y-3 p-3">
         <section className="rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Search Pages</p>
           <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">Find text across loaded PDFs (embedded text content).</p>
-          <div className="group relative mt-2">
+          <div className="mt-2">
             <input
               value={searchQuery}
               onChange={(event) => onSearchQueryChange(event.target.value)}
               className="w-full rounded border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-900"
               placeholder="Search text..."
+              title="Search across all loaded pages. Type at least 2 characters."
               aria-label="Search page text"
             />
-            <div className={tooltipClasses}>
-              <p className="font-medium text-slate-900 dark:text-slate-100">Search Pages</p>
-              <p className="mt-1 text-slate-600 dark:text-slate-300">Search across all pages. Type at least 2 characters to start indexing.</p>
-            </div>
           </div>
           {isIndexingSearch && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Indexing pages...</p>}
           {!isIndexingSearch && searchQuery.trim().length >= 2 && (
@@ -85,42 +78,20 @@ export function OperationHistoryPanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Smart Tools</p>
           <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">One-click document cleanup and extraction presets.</p>
           <div className="mt-2 grid grid-cols-2 gap-1">
-            <div className="group relative">
-              <button type="button" onClick={onSortOriginal} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Sort Original</button>
-              <div className={tooltipClasses}>
-                Restore page sequence by source file and original page index.
-              </div>
-            </div>
-            <div className="group relative">
-              <button type="button" onClick={onRemoveDuplicates} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Dedupe</button>
-              <div className={tooltipClasses}>
-                Remove duplicate source-page entries while keeping first occurrence.
-              </div>
-            </div>
-            <div className="group relative">
-              <button type="button" onClick={onExtractOdd} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Odd</button>
-              <div className={tooltipClasses}>
-                Export a new PDF with pages 1, 3, 5 and so on based on current order.
-              </div>
-            </div>
-            <div className="group relative">
-              <button type="button" onClick={onExtractEven} className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Even</button>
-              <div className={tooltipClasses}>
-                Export a new PDF with pages 2, 4, 6 and so on based on current order.
-              </div>
-            </div>
+            <button type="button" onClick={onSortOriginal} title="Restore page sequence by source file and original page index" className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Sort Original</button>
+            <button type="button" onClick={onRemoveDuplicates} title="Remove duplicate source-page entries, keeping the first occurrence" className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Dedupe</button>
+            <button type="button" onClick={onExtractOdd} title="Keep only odd-numbered pages (1, 3, 5…) based on current order" className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Odd</button>
+            <button type="button" onClick={onExtractEven} title="Keep only even-numbered pages (2, 4, 6…) based on current order" className="w-full rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Extract Even</button>
           </div>
-          <div className="group relative mt-2">
+          <div className="mt-2">
             <button
               type="button"
               onClick={onOpenExportPreview}
+              title="Open export summary, choose profile, and download"
               className="w-full rounded bg-cyan-600 px-2 py-1.5 text-[11px] font-medium text-white hover:bg-cyan-700"
             >
               Export Preview
             </button>
-            <div className={tooltipClasses}>
-              Open export summary, choose profile, and download with progress feedback.
-            </div>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1">
             <button type="button" onClick={onOpenKeyboardHelp} className="rounded border border-gray-300 px-2 py-1 text-[11px] hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">Shortcuts</button>
@@ -129,7 +100,6 @@ export function OperationHistoryPanel({
         </section>
 
       </div>
-      {/* Scrollable area — only the activity timeline scrolls */}
       <div className="min-h-0 flex-1 overflow-y-auto p-3 pt-0">
         <section>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Activity</div>

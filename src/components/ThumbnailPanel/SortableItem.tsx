@@ -11,10 +11,10 @@ export function SortableItem({ id, children, isDropTarget = false }: SortableIte
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style: CSSProperties = {
-    // Use Translate (not Transform) to avoid scale artifacts when combined with DragOverlay.
     transform: CSS.Translate.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : undefined,
+    opacity: isDragging ? 0.3 : undefined,
+    zIndex: isDragging ? 0 : 'auto',
   };
 
   return (

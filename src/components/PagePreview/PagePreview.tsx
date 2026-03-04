@@ -17,6 +17,8 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
   const renderRunRef = useRef(0);
   const lastReportedZoomRef = useRef<number | null>(null);
   const [isRendering, setIsRendering] = useState(false);
+  const renderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showRenderingHint, setShowRenderingHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
   const manualZoomDependency = zoomMode === 'manual' ? zoom : 1;
@@ -72,12 +74,16 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
     }
 
     const run = async () => {
-      // Always cancel / await the previous render before touching the canvas.
+      // Cancel the previous render and yield a microtask so pdf.js fully releases the canvas.
       await cancelCurrentRender();
+      await new Promise<void>((r) => setTimeout(r, 0));
       if (stale()) return;
 
       setIsRendering(true);
       setError(null);
+      // Only show the indicator if the render takes more than 300 ms.
+      if (renderTimerRef.current) clearTimeout(renderTimerRef.current);
+      renderTimerRef.current = setTimeout(() => { setShowRenderingHint(true); }, 300);
 
       try {
         let scale = manualZoomDependency;
@@ -119,13 +125,15 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
         await task.promise;
         renderTaskRef.current = null;
       } catch (err: unknown) {
-        // Silently ignore ANY error from a superseded / cancelled render.
         if (stale()) return;
-        const msg = (err as { name?: string })?.name;
-        if (msg === 'RenderingCancelledException' || msg === 'RenderingCancelled') return;
+        // Silently swallow any cancellation or canvas-conflict error from pdf.js.
+        const name = (err as { name?: string })?.name ?? '';
+        const message = (err as { message?: string })?.message ?? '';
+        if (/cancel|rendering/i.test(name) || /canvas|render/i.test(message)) return;
         setError(err instanceof Error ? err.message : 'Failed to render page.');
       } finally {
-        if (!stale()) setIsRendering(false);
+        if (renderTimerRef.current) { clearTimeout(renderTimerRef.current); renderTimerRef.current = null; }
+        if (!stale()) { setIsRendering(false); setShowRenderingHint(false); }
       }
     };
 
@@ -146,8 +154,8 @@ export function PagePreview({ activePage, documents, zoom, zoomMode, onEffective
 
   return (
     <div ref={containerRef} className="relative flex h-full items-start justify-center overflow-auto p-6">
-      {isRendering && (
-        <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded bg-gray-900 px-3 py-1 text-xs text-white">
+      {isRendering && showRenderingHint && (
+        <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded bg-gray-900/70 px-3 py-1 text-xs text-white">
           Rendering page...
         </div>
       )}

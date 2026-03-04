@@ -85,34 +85,33 @@ export function ThumbnailPanel({
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {pages.map((page) => (
-              <div key={page.id}>
-                <SortableItem
-                  id={page.id}
-                  isDropTarget={dragState.activeId !== page.id && dragState.overId === page.id}
-                >
-                  <ThumbnailCard
-                    page={page}
-                    thumbnailUrl={thumbnails[page.id]}
-                    isActive={activePageId === page.id}
-                    isSelected={selectedIds.has(page.id)}
-                    onClick={(event) => {
-                      onSelect(page.id, event.ctrlKey || event.metaKey, event.shiftKey);
-                    }}
-                    onActivate={() => {
-                      onSelect(page.id, false, false);
-                    }}
-                    onRotate={() => onRotate(page.id)}
-                    onDelete={() => onDelete(page.id)}
-                  />
-                </SortableItem>
-              </div>
+              <SortableItem
+                key={page.id}
+                id={page.id}
+                isDropTarget={dragState.activeId !== page.id && dragState.overId === page.id}
+              >
+                <ThumbnailCard
+                  page={page}
+                  thumbnailUrl={thumbnails[page.id]}
+                  isActive={activePageId === page.id}
+                  isSelected={selectedIds.has(page.id)}
+                  onClick={(event) => {
+                    onSelect(page.id, event.ctrlKey || event.metaKey, event.shiftKey);
+                  }}
+                  onActivate={() => {
+                    onSelect(page.id, false, false);
+                  }}
+                  onRotate={() => onRotate(page.id)}
+                  onDelete={() => onDelete(page.id)}
+                />
+              </SortableItem>
             ))}
           </div>
         </SortableContext>
 
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={null} zIndex={9999}>
           {activeDragPage ? (
-            <div className="w-full max-w-[220px] opacity-90">
+            <div className="w-full max-w-[220px] rounded-lg border-2 border-blue-400 shadow-xl">
               <ThumbnailCard
                 page={activeDragPage}
                 thumbnailUrl={thumbnails[activeDragPage.id]}
